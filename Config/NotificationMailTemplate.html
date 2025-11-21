@@ -1,0 +1,155 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+
+<head>
+    <meta http-equiv="Content-Type"
+          content="text/html; charset=utf-8" />
+    <title></title>
+    <style type="text/css">
+        table.diff {font-family:Courier; border:medium;}
+        .diff_header {background-color:#e0e0e0}
+        td.diff_header {text-align:right}
+        .diff_next {background-color:#c0c0c0}
+        .diff_add {background-color:#aaffaa}
+        .diff_chg {background-color:#ffff77}
+        .diff_sub {background-color:#ffaaaa}
+
+        h3{
+            color:blue
+        }
+        li {
+            list-style: none;
+        }
+        ul {
+            display: flex;
+        }
+        table,td {
+            border: 1px solid #333;
+        }
+
+        thead,tfoot {
+            background-color: #333;
+            color: #fff;
+        }
+        
+        .title {
+            background-color: #333;
+            color: #fff;
+            font-weight: bold;
+        }
+        .diffInfoTable {
+            table-layout: fixed;
+        }  
+    </style>
+</head>
+
+<body>
+    <font size="-1">
+    （※本メールに返信しないでください。本メールに関する問い合わせはCIGまで別途ご連絡ください）
+</br>
+</br>  
+</font>
+    ${ExtraWord2}
+    ${ExtraWord}
+    <h3>■概要</h3>
+    <b>${TargetName}</b> のリークサイトに変更がありました。</br>
+    (接続不安定なタイミングやページの読み込みが中断された場合などでも誤検知がみられることがあります)</br>
+    
+    ${AISummery}
+
+    ${ActualNewVictims}
+    ${ActualDelVictims}
+
+    <h3>■主な差分箇所</h3>
+    <!-- <font size="-2">
+        <span style="color:green;background-color:gainsboro"> + </span>は追加された行を、<span style="color:red;background-color:gainsboro"> - </span>は削除された行を意味します。</br>
+        (TOPページから古いページに移動された場合も<span style="color:red;background-color:gainsboro"> - </span>として表示される場合があります。)</br>
+    </font>
+    <hr size="2" width="100%" align="center"> -->
+    ${diffText}
+
+    <h3>■全体のテキスト差分</h3>
+    <font size="-2">（※詳細を含むページ全体の比較結果がhtmlファイルとしてダウンロードできます。）</font><br>
+    <!-- ページビュー数などの常に変わる箇所も含め、すべての差分をハイライトしています。</br>
+    ウェブページの可視文字列をテキストに変換したものであり、画像などは含みません。</br> -->
+    ${diffHTML}</br>
+   
+    <!-- 現状使用してない → プログラム側では''を代入してる -->
+    ${diffImage}
+
+    <h3>■リークサイトのフルスクリーンショット(今回分)</h3>
+    ${imageURL}</br>
+
+    <h3>■変更前後のリークサイト画面（概要）</h3>
+    ${screenShotFailed}
+    <font size="-2">（※下記画像は適当なサイズでトリミングしています。フルスクリーンショットは上記を参照ください。緑枠がない場合は変更箇所がトリミング領域外の可能性があります。）</font><br>
+    <!-- 変更後のリークサイト画面のキャプチャを確認するには以下のリンクをクリックしてください。</br>
+    ダークウェブなどへの接続は発生しません。取得済みの画像ファイルへのアクセスですのでご安心ください。</br>
+    </br>    
+    "キャプチャの保存先(要検討)"</br> -->
+    <table width="auto" border="1"  cellspacing="0" cellpadding="1" width="100%">
+        <tr>
+            <td align="center" width="33%"><span style='color:black'>前回取得時(${fileDateTime_Before})</span></td>
+            <td align="center" width="33%"><span style='color:black'>今回取得時(${fileDateTime_After})</span></td>
+            <td align="center" width="33%"><span style='color:black'>前回と今回の差分</span></td>
+        </tr>        
+        <tr valign="top">
+            <td><img width="100%" src="cid:image1" alt="Image"></td>
+            <td><img width="100%" src="cid:image2" alt="Image"></td>
+            <td><img width="100%" src="cid:image3" alt="Image"></td>
+        </tr>
+    </table>  
+    </br>
+    <h3>■差分に使用した記録情報</h3>
+    <!-- <hr size="2" width="100%" align="center"> -->
+        <table class=MsoNormalTable border=1 cellpadding=10  width="100%">
+            <tr>
+                <td valign=top style='background:silver'></td>
+                <td align="center" valign=top style='background:silver'>
+                    <span style='color:black'>比較対象データの取得日時</span>
+                </td>
+                <td align="center" valign=top style='background:silver'>
+                    <span style='color:black'>ファイルサイズ<span lang=EN-US> (bytes)</span></span>
+                </td>
+            </tr>
+            <tr'>
+                <td align="center">前回</td>
+                <td>${fileDateTime_Before}</td>
+                <td>${fileDateSize_Before}</td>
+            </tr>
+            <tr>
+                <td align="center">今回</td>
+                <td>${fileDateTime_After}</td>
+                <td>${fileDateSize_After}
+                </td>
+            </tr>
+        </table>
+        
+    <h3>■アクセス履歴</h3>
+    <table class=MsoNormalTable border=1 cellpadding=10  width="100%">
+        <tr>
+            <td align="center" valign=top style='background:silver'>履歴</td>
+            <td align="center" valign=top style='background:silver'>アクセス開始日時</td>
+            <td align="center" valign=top style='background:silver'>アクセス終了日時</td>
+            <td align="center" valign=top style='background:silver'>ステータス</td>
+            <td align="center" valign=top style='background:silver'>取得データサイズ(Byte)</td>
+        </tr>
+        ${AccessLogTable}
+        <!-- <tr'>
+            <td align="center">前回</td>
+            <td>${fileDateTime_Before}</td>
+            <td>${fileDateTime_Before}</td>
+            <td>${fileDateSize_Before}</td>
+        </tr>
+        <tr>
+            <td align="center">今回</td>
+            <td>${fileDateTime_After}</td>
+            <td>${fileDateTime_After}</td>
+            <td>${fileDateSize_After}</td>
+        </tr> -->
+    </table>
+</body>
+</html>

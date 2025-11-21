@@ -1,0 +1,6 @@
+/.hg/
+*/back/*
+back/*
+/Data/
+/Config/BackUpTargetURL/
+*.bak

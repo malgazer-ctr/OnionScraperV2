@@ -1,0 +1,948 @@
+
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>監視レポート</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                color: #333;
+                margin: 20px;
+                background-color: #f0f2f5;
+            }
+            .container {
+                border: 1px solid #ccc;
+                padding: 20px;
+                border-radius: 12px;
+                background-color: #ffffff;
+                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+            .important-info {
+                background-color: #ffcccc;
+                padding: 2px;
+                border-radius: 0 0 8px 8px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .important-info strong {
+                display: block;
+                margin-bottom: 4px;
+                font-size: 0.95em;
+            }
+            .important-info .announcement-note {
+                font-size: 0.7em;
+                display: block;
+                margin-top: -4px;
+                margin-bottom: 4px;
+            }
+            .important-info .beta-note {
+                font-size: 0.7em;
+                display: block;
+                margin-top: -4px;
+                margin-bottom: 4px;
+                color: #666;
+            }
+            .important-info-section {
+                padding: 8px 12px;
+                margin: 2px;
+                border-radius: 6px;
+                border-left: 4px solid #ff6666;
+                background-color: #fff0f0;
+            }
+            .important-info-content {
+                margin-left: 8px;
+                font-size: 0.9em;
+            }
+            .summary-content {
+                background-color: #ffefc5;
+                padding: 15px;
+                border-radius: 0 0 8px 8px;
+                margin-bottom: 20px;
+            }
+            .info-section {
+                margin-bottom: 20px;
+            }
+            .info-card {
+                background-color: #ffffff;
+                padding: 15px;
+                border-radius: 8px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                margin-bottom: 15px;
+                border-left: 5px solid;
+            }
+            .info-card.added {
+                border-left-color: #66b266;
+                background-color: #f0fff0;
+            }
+            .info-card.deleted {
+                border-left-color: #696969;
+                background-color: #e0e0e0;
+            }
+            .info-header {
+                color: #ffffff;
+                padding: 10px;
+                border-radius: 8px 8px 0 0;
+                font-weight: bold;
+                font-size: 1.1em;
+            }
+            .info-header.alert {
+                background-color: #ff6666;
+            }
+            .info-header.summary {
+                background-color: #ffaa00;
+            }
+            .info-header.added {
+                background-color: #66b266;
+            }
+            .info-header.deleted {
+                background-color: #696969;
+            }
+            .info-body {
+                padding: 15px;
+            }
+            .info-body strong {
+                font-weight: bold;
+            }
+            .info-card.deleted .info-body {
+                color: #444;
+            }
+            .info-card.deleted a {
+                color: #0066cc;
+            }
+            a {
+                color: #0073e6;
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+            .word-detection-card {
+                border: 1px solid #eee;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                background-color: #fff;
+                overflow: hidden;
+            }
+            .word-detection-header {
+                background-color: #f8f9fa;
+                padding: 12px 16px;
+                border-bottom: 1px solid #eee;
+            }
+            .word-detection-header h3 {
+                margin: 0;
+                color: #333;
+                font-size: 1.1em;
+            }
+            .word-detection-section {
+                padding: 16px;
+                border-bottom: 1px solid #eee;
+            }
+            .word-detection-section:last-child {
+                border-bottom: none;
+            }
+            .word-label {
+                display: inline-block;
+                background-color: #e9ecef;
+                padding: 4px 12px;
+                border-radius: 4px;
+                font-size: 0.95em;
+                color: #495057;
+                margin-bottom: 8px;
+            }
+            .locations-container {
+                margin-left: 16px;
+            }
+            .location-title {
+                font-size: 0.9em;
+                color: #666;
+                margin-bottom: 8px;
+            }
+            .detection-location {
+                background-color: #f8f9fa;
+                padding: 8px 12px;
+                border-radius: 4px;
+                margin-bottom: 8px;
+                font-size: 0.95em;
+                border: 1px solid #eee;
+            }
+            .detection-location:last-child {
+                margin-bottom: 0;
+            }
+            .note-text {
+                font-size: 0.85em;
+                color: #666;
+                margin-top: 12px;
+                padding: 0 8px;
+            }
+
+            .note-text-alignRigit {
+                font-size: 0.85em;
+                color: #666;
+                margin-top: 12px;
+                padding: 0 8px;
+                text-align: right;
+            }
+
+            .note-text-deleted {
+                color: #ffffff !important; /* 親要素のcolor指定を確実に上書き */
+                font-size: 0.85em !important;
+                margin-top: 12px !important;
+                padding: 0 8px !important;
+            }
+
+            .deleted-orgs-list {
+                margin: 10px 0;
+                padding-left: 20px;
+            }
+            
+            .deleted-orgs-list li {
+                margin-bottom: 4px;
+            }
+
+            .summary-table {
+                width: 100%;
+                table-layout: fixed;
+                border-collapse: separate;
+                border-spacing: 0;
+                margin: 10px 0;
+                background: #fff;
+                border-radius: 8px;
+                overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            }
+            .summary-table th,
+            .summary-table td {
+                padding: 12px;
+                text-align: left;
+                border-bottom: 1px solid #eee;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .summary-table th:nth-child(1),
+            .summary-table td:nth-child(1) {
+                width: 400px;
+            }
+            .summary-table th:nth-child(2),
+            .summary-table td:nth-child(2) {
+                width: 200px;
+            }
+            .summary-table th:nth-child(3),
+            .summary-table td:nth-child(3) {
+                width: 150px;
+            }
+            .summary-table th:nth-child(4),
+            .summary-table td:nth-child(4) {
+                width: auto;
+            }
+            .summary-table td.org-name {
+                font-weight: 500;
+                color: #333;
+            }
+            .summary-table td:hover {
+                position: relative;
+            }
+            .summary-table td:hover::after {
+                content: attr(title);
+                position: absolute;
+                left: 0;
+                top: 100%;
+                background: #333;
+                color: #fff;
+                padding: 5px 10px;
+                border-radius: 4px;
+                font-size: 0.9em;
+                z-index: 1000;
+                white-space: normal;
+                max-width: 300px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            .table-container {
+                margin: 15px 0;
+                border-radius: 8px;
+                overflow: auto;
+            }
+            .separator {
+                width: 100%;
+                height: 1px;
+                background-color: #aaa;
+                margin: 12px 0;
+                opacity: 0.85;
+            }
+            .important-info .separator {
+                background-color: #ff8080;
+                margin: 8px 0;
+                opacity: 0.9;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="info-section">
+                <div class="note-text-alignRigit">詳細は本メールの「検知した企業情報」を参照してください。</div>
+                <div class="info-header summary">概要</div>
+                <div class="summary-content">
+                    <strong>今回検知した企業 (合計: 5 件中 4 件を記載):</strong>
+                    <div class="note-text">※検知件数が多い場合、分割してメールが送られます。(現在 1 通目 / 合計 2 通)</div>
+                    
+                    
+                    <div class="table-container">
+                        <table class="summary-table">
+                            <thead>
+                                <tr>
+                                    <th>掲載名</th>
+                                    <th>組織名 (AI調査)</th>
+                                    <th>国 (AI調査)</th>
+                                    <th>業種 (AI調査)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                
+                                <tr>
+                                    <td class="org-name" title="株式会社テックソリューションズ">株式会社テックソリューションズ</td>
+                                    <td class="org-name" title="てててて">てててて</td>
+                                    <td class="location" title="日本">日本</td>
+                                    <td class="business-type" title="製造">製造</td>
+                                </tr>
+                                
+                                <tr>
+                                    <td class="org-name" title="Global Industries Corporation">Global Industries Corporation</td>
+                                    <td class="org-name" title="hxxps[://]example[.]com/victim1">hxxps[://]example[.]com/victim1</td>
+                                    <td class="location" title="アメリカ">アメリカ</td>
+                                    <td class="business-type" title="製造">製造</td>
+                                </tr>
+                                
+                                <tr>
+                                    <td class="org-name" title="関西システム開発株式会社">関西システム開発株式会社</td>
+                                    <td class="org-name" title="hxxps[://]example[.]com/victim3">hxxps[://]example[.]com/victim3</td>
+                                    <td class="location" title="アメリカ">アメリカ</td>
+                                    <td class="business-type" title="情報通信">情報通信</td>
+                                </tr>
+                                
+                                <tr>
+                                    <td class="org-name" title="European Tech Solutions">European Tech Solutions</td>
+                                    <td class="org-name" title="hxxps[://]example[.]com/victim4">hxxps[://]example[.]com/victim4</td>
+                                    <td class="location" title="グレナデン諸島および英国連合による統治">グレナデン諸島および英国連合による統治</td>
+                                    <td class="business-type" title="卸売・小売">卸売・小売</td>
+                                </tr>
+                                
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    
+
+                    
+                    <strong>今回削除された企業 6 件:</strong><br>
+                    <ul class="deleted-orgs-list">
+                        
+                        <li>American Manufacturing Ltd</li>
+                        
+                        <li>東海エレクトロニクス工業</li>
+                        
+                        <li>Nordic Solutions AB</li>
+                        
+                        <li>Toyota</li>
+                        
+                        <li>BMW Japan</li>
+                        
+                        
+                        <li>＋ 他 1 件</li>
+                        
+                    </ul>
+                    
+
+                    <strong>フルスクリーンショット (トップページ):</strong> 
+                    
+                        <a href="http://www.boxTest" target="_blank">フルスクリーンショットを表示</a>
+                    
+
+                    <div class="note-text-alignRigit" align=”right”>検知日時 (前回日時: [2024/11/17 02:33:12]・今回日時: [2024/12/04 15:04:57]・差分時間: [17日 12時間 31分])</div>
+                </div>
+            </div>
+            
+            
+            <div class="info-section">
+                <div class="info-header alert">重要情報</div>
+                <div class="important-info">
+                    
+                    <div class="important-info-section">
+                        <strong>(生成AI調査) 日本に関係する組織が含まれている可能性があります。</strong>
+                        <div class="important-info-content">
+                            ■対象：株式会社東京テクノロジー、大阪産業株式会社、名古屋工業システムズ、九州エレクトロニクス
+                        </div>
+                    </div>
+                    <div class="separator"></div>
+                    
+
+                    
+                    <div class="important-info-section">
+                        <strong>(サイト構成)サイト構成が変更された可能性があります。</strong>
+                    </div>
+                    <div class="separator"></div>
+                    
+
+                    
+                    <div class="important-info-section">
+                        <strong>(サイト接続)サイトに接続できなくなった可能性があります。</strong>
+                    </div>
+                    <div class="separator"></div>
+                    
+
+                    
+
+                    
+                    <div class="important-info-section">
+                        <strong>(指定情報更新-個別)指定された個別情報が更新された可能性があります。</strong>
+                    </div>
+                    <div class="separator"></div>
+                    
+
+                    
+                    <div class="important-info-section">
+                        <strong>(生成AI調査) 組織名に文章等が含まれている可能性があります。</strong>
+                        <strong class="announcement-note">※攻撃グループによるアナウンスなどと判断された可能性</strong>
+                        <div class="important-info-content">
+                            ■対象：Statement from BlackBasta regarding Company、Official announcement about victim、Press release regarding recent attack、Message to stakeholders
+                        </div>
+                    </div>
+                    <div class="separator"></div>
+                    
+
+                    
+                    <div class="important-info-section">
+                        <strong>(生成AI検知)以下の言葉が日本語の可能性有と判断されました。</strong>
+                        
+                            <div class="word-detection-card">
+                                <div class="word-detection-header">
+                                    <h3>掲載組織: www[.]toyota[.]com</h3>
+                                </div>
+
+                                
+                                
+                                    
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                
+                                    
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                
+
+                                
+                                
+                                    
+                                    
+                                        
+                                        
+                                            
+                                        
+                                        
+                                    
+                                
+                                    
+                                    
+                                        
+                                        
+                                        
+                                    
+                                
+                                    
+                                    
+                                        
+                                        
+                                            
+                                        
+                                        
+                                    
+                                
+
+                                
+                                    <div class="word-detection-section">
+                                        <div class="word-label">
+                                            検知ワード: ToyotaAAAAA
+                                        </div>
+                                        <div class="locations-container">
+                                            <div class="location-title">該当箇所:</div>
+                                            
+                                                <div class="detection-location">
+                                                    www[.]<span style="color: red; font-weight: bold;">toyotaAAAAA</span>A[.]com
+                                                </div>
+                                            
+                                                <div class="detection-location">
+                                                    Toyota is renowned worldwide for its reliable vehicles and innovative approach to automotive technology[.]
+                                                </div>
+                                            
+                                        </div>
+                                    </div>
+                                
+                                    <div class="word-detection-section">
+                                        <div class="word-label">
+                                            検知ワード: Asahi
+                                        </div>
+                                        <div class="locations-container">
+                                            <div class="location-title">該当箇所:</div>
+                                            
+                                                <div class="detection-location">
+                                                    Information: Trifecta is a trusted <span style="color: red; font-weight: bold;">Asahi</span> Daiei advisor for some of the most widely recognized and successful companies in the world
+                                                </div>
+                                            
+                                        </div>
+                                    </div>
+                                
+                            </div>
+                        
+                            <div class="word-detection-card">
+                                <div class="word-detection-header">
+                                    <h3>掲載組織: www[.]credio[.]eu</h3>
+                                </div>
+
+                                
+                                
+                                    
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                
+                                    
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                        
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                
+
+                                
+                                
+                                    
+                                    
+                                        
+                                        
+                                            
+                                        
+                                        
+                                    
+                                
+                                    
+                                    
+                                        <div class="word-detection-section">
+                                            <div class="word-label">
+                                                検知ワード: BMW / Japan
+                                            </div>
+                                            <div class="locations-container">
+                                                <div class="location-title">該当箇所:</div>
+                                                <div class="detection-location">
+                                                    
+                                                        <span style="color: red; font-weight: bold;">BMW</span> auto Japan
+                                                    
+                                                        BMW auto <span style="color: red; font-weight: bold;">Japan</span>
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    
+                                
+
+                                
+                                    <div class="word-detection-section">
+                                        <div class="word-label">
+                                            検知ワード: [.]jp
+                                        </div>
+                                        <div class="locations-container">
+                                            <div class="location-title">該当箇所:</div>
+                                            
+                                                <div class="detection-location">
+                                                    test<span style="color: red; font-weight: bold;">[.]jp</span>
+                                                </div>
+                                            
+                                        </div>
+                                    </div>
+                                
+                            </div>
+                        
+                        <div class="note-text">※上記、"該当箇所"のうち一部情報は仕様上、本メールに記載していないことにご留意ください。</div>
+                    </div>
+                    <div class="separator"></div>
+                    
+
+                    
+                    <div class="important-info-section">
+                        <strong>(重要ワード) 以下のワードは重要な情報の可能性があります。</strong>
+                        
+                            <div class="word-detection-card">
+                                <div class="word-detection-header">
+                                    <h3>掲載組織: www[.]toyota[.]com</h3>
+                                </div>
+
+                                
+                                
+                                    
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                
+                                    
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                
+
+                                
+                                
+                                    
+                                    
+                                        
+                                        
+                                            
+                                        
+                                        
+                                    
+                                
+                                    
+                                    
+                                        
+                                        
+                                        
+                                    
+                                
+                                    
+                                    
+                                        
+                                        
+                                            
+                                        
+                                        
+                                    
+                                
+
+                                
+                                    <div class="word-detection-section">
+                                        <div class="word-label">
+                                            検知ワード: Toyota
+                                        </div>
+                                        <div class="locations-container">
+                                            <div class="location-title">該当箇所:</div>
+                                            
+                                                <div class="detection-location">
+                                                    www[.]<span style="color: red; font-weight: bold;">toyota</span>[.]com
+                                                </div>
+                                            
+                                                <div class="detection-location">
+                                                    <span style="color: red; font-weight: bold;">Toyota</span> is renowned worldwide for its reliable vehicles and innovative approach to automotive technology[.]
+                                                </div>
+                                            
+                                        </div>
+                                    </div>
+                                
+                                    <div class="word-detection-section">
+                                        <div class="word-label">
+                                            検知ワード: Asahi
+                                        </div>
+                                        <div class="locations-container">
+                                            <div class="location-title">該当箇所:</div>
+                                            
+                                                <div class="detection-location">
+                                                    Information: Trifecta is a trusted <span style="color: red; font-weight: bold;">Asahi</span> Daiei advisor for some of the most widely recognized and successful companies in the world
+                                                </div>
+                                            
+                                        </div>
+                                    </div>
+                                
+                            </div>
+                        
+                            <div class="word-detection-card">
+                                <div class="word-detection-header">
+                                    <h3>掲載組織: www[.]credio[.]eu</h3>
+                                </div>
+
+                                
+                                
+                                    
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                
+                                    
+                                        
+                                            
+                                                
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                        
+                                            
+                                            
+                                                
+                                            
+                                        
+                                    
+                                
+
+                                
+                                
+                                    
+                                    
+                                        
+                                        
+                                            
+                                        
+                                        
+                                    
+                                
+                                    
+                                    
+                                        <div class="word-detection-section">
+                                            <div class="word-label">
+                                                検知ワード: BMW / Japan
+                                            </div>
+                                            <div class="locations-container">
+                                                <div class="location-title">該当箇所:</div>
+                                                <div class="detection-location">
+                                                    
+                                                        <span style="color: red; font-weight: bold;">BMW</span> auto Japan
+                                                    
+                                                        BMW auto <span style="color: red; font-weight: bold;">Japan</span>
+                                                    
+                                                </div>
+                                            </div>
+                                        </div>
+                                    
+                                
+
+                                
+                                    <div class="word-detection-section">
+                                        <div class="word-label">
+                                            検知ワード: [.]jp
+                                        </div>
+                                        <div class="locations-container">
+                                            <div class="location-title">該当箇所:</div>
+                                            
+                                                <div class="detection-location">
+                                                    test<span style="color: red; font-weight: bold;">[.]jp</span>
+                                                </div>
+                                            
+                                        </div>
+                                    </div>
+                                
+                            </div>
+                        
+                        <div class="note-text">※上記、"該当箇所"のうち一部情報は仕様上、本メールに記載していないことにご留意ください。</div>
+                    </div>
+                    <div class="separator"></div>
+                    
+                </div>
+            </div>
+            
+
+            <!-- 追加された企業情報一覧 -->
+            
+            <div class="info-section">
+                <div class="info-header added">検知した企業情報</div>
+                
+                <div class="info-card added">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>株式会社テックソリューションズ<br>
+                        <strong>掲載されたURL:</strong>hxxps[://]example[.]com/victim1<br>
+                        <strong>更新日時 (公開予定日時含):</strong> 2024-11-25 10:30<br>
+                        <strong>検知日時 (システムの初情報取得日時):</strong> 2024-11-25 09:15<br>
+                        <strong>フルスクリーンショット (詳細ページ):</strong> 
+                        
+                            <a href="https://example.com/screenshot1" target="_blank">フルスクリーンショットを表示</a>
+                        <br>
+                        <strong>組織名 (AI調査):</strong> victimNameAI<br>
+                        <strong>国 (AI調査):</strong> victimHQLocation<br>
+                        <strong>業種 (AI調査):</strong> victimBizType<br>
+                        <strong>URL (AI調査):</strong> victimUrlAI<br>
+                        <strong>日本との関係性 (AI調査):</strong> victimsRelationJPByAI<br>
+                        
+                        <strong>声明の可能性 (AI調査):</strong> annoucementAI<br>
+                        
+                    </div>
+                </div>
+                
+                <div class="info-card added">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>Global Industries Corporation<br>
+                        <strong>掲載されたURL:</strong>hxxps[://]example[.]com/victim2<br>
+                        <strong>更新日時 (公開予定日時含):</strong> 2024-11-25 11:45<br>
+                        <strong>検知日時 (システムの初情報取得日時):</strong> 2024-11-25 10:30<br>
+                        <strong>フルスクリーンショット (詳細ページ):</strong> 
+                        
+                            <a href="https://example.com/screenshot2" target="_blank">フルスクリーンショットを表示</a>
+                        <br>
+                        <strong>組織名 (AI調査):</strong> victimNameAI<br>
+                        <strong>国 (AI調査):</strong> victimHQLocation<br>
+                        <strong>業種 (AI調査):</strong> victimBizType<br>
+                        <strong>URL (AI調査):</strong> victimUrlAI<br>
+                        <strong>日本との関係性 (AI調査):</strong> victimsRelationJPByAI<br>
+                        
+                        <strong>声明の可能性 (AI調査):</strong> annoucementAI<br>
+                        
+                    </div>
+                </div>
+                
+                <div class="info-card added">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>関西システム開発株式会社<br>
+                        <strong>掲載されたURL:</strong>hxxps[://]example[.]com/victim3<br>
+                        <strong>更新日時 (公開予定日時含):</strong> 2024-11-25 14:20<br>
+                        <strong>検知日時 (システムの初情報取得日時):</strong> 2024-11-25 13:00<br>
+                        <strong>フルスクリーンショット (詳細ページ):</strong> 
+                        
+                            <a href="https://example.com/screenshot3" target="_blank">フルスクリーンショットを表示</a>
+                        <br>
+                        <strong>組織名 (AI調査):</strong> victimNameAI<br>
+                        <strong>国 (AI調査):</strong> victimHQLocation<br>
+                        <strong>業種 (AI調査):</strong> victimBizType<br>
+                        <strong>URL (AI調査):</strong> victimUrlAI<br>
+                        <strong>日本との関係性 (AI調査):</strong> 不明<br>
+                        
+                        <strong>声明の可能性 (AI調査):</strong> annoucementAI<br>
+                        
+                    </div>
+                </div>
+                
+                <div class="info-card added">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>European Tech Solutions<br>
+                        <strong>掲載されたURL:</strong>hxxps[://]example[.]com/victim4<br>
+                        <strong>更新日時 (公開予定日時含):</strong> 2024-11-25 15:40<br>
+                        <strong>検知日時 (システムの初情報取得日時):</strong> 2024-11-25 14:30<br>
+                        <strong>フルスクリーンショット (詳細ページ):</strong> 
+                        
+                            <a href="https://example.com/screenshot4" target="_blank">フルスクリーンショットを表示</a>
+                        <br>
+                        <strong>組織名 (AI調査):</strong> victimNameAI<br>
+                        <strong>国 (AI調査):</strong> victimHQLocation<br>
+                        <strong>業種 (AI調査):</strong> victimBizType<br>
+                        <strong>URL (AI調査):</strong> victimUrlAI<br>
+                        <strong>日本との関係性 (AI調査):</strong> 不明<br>
+                        
+                    </div>
+                </div>
+                
+            </div>
+            
+
+            <!-- 削除された企業情報一覧 -->
+            
+            <div class="info-section">
+                <div class="info-header deleted">削除された企業情報
+                <span class="note-text-deleted">(※古いページへの移動などで表示されなくなったケースを含みます)</span>
+                </div>
+                
+                
+                <div class="info-card deleted">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>American Manufacturing Ltd<br>
+                    </div>
+                </div>
+                
+                <div class="info-card deleted">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>東海エレクトロニクス工業<br>
+                    </div>
+                </div>
+                
+                <div class="info-card deleted">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>Nordic Solutions AB<br>
+                    </div>
+                </div>
+                
+                <div class="info-card deleted">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>Toyota<br>
+                    </div>
+                </div>
+                
+                <div class="info-card deleted">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>BMW Japan<br>
+                    </div>
+                </div>
+                
+                <div class="info-card deleted">
+                    <div class="info-body">
+                        <strong>掲載組織名:</strong>MBSD<br>
+                    </div>
+                </div>
+                
+            </div>
+            
+        </div>
+        ※本メールに返信しないでください。本メールに関する問い合わせはCIGまで別途ご連絡ください。<br>
+        ※接続不安定なタイミングやページの読み込みが中断された場合などでも誤検知がみられることがあります。
+    </body>
+    </html>
+    

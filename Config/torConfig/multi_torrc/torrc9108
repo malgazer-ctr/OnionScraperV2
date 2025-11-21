@@ -1,0 +1,4 @@
+SocksPort localhost:9108
+StrictNodes 1
+ExcludeNodes SlowServer
+DataDirectory E:\MonitorSystem\Source\OnionScraperV2\Config\torConfig\multi_torrc\tor9108

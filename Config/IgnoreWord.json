@@ -1,0 +1,352 @@
+{
+    "pattern":[
+    {
+        "words":["ERR_SOCKS_CONNECTION_FAILED"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Enable JavaScript and cookies to continue"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Reached error page: about:neterror"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["This check is taking longer than expected."],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["このサイトにアクセスできません"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Checking if the site connection is secure"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["disconnected: unable to connect to renderer"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["TimedPromise timed out after"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["timeout: Timed out receiving message from renderer"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Due to high load we have to verify your connection."],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["If yo see this page, please read readme for more information"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Connection timed out"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Error code 522"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["You will see the LockBit blog shortly"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Error establishing a database connection"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["unknown error: net::ERR_CONNECTION_RESET"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["unknown error: net::ERR_PROXY_CONNECTION_FAILED"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["504 Gateway Time-out"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Error accessing resource:"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Web server is down"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["このページは動作していません"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["404 page not found"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["502 Bad Gateway"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["503 Service Unavailable"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Faithfully yours, nginx.- PLAY"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Retry later"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["404 Not Found"],
+        "groupNames":["NULLBULGE"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["403 DDOS fliter killed your path"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Please read carefully the \"readme\" file you got from us."],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["You have been placed in a queue, awaiting forwarding to the platform."],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Refresh (expired)"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Your estimated wait time is"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["NetworkError when attempting to fetch resource."],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Database Exception"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["This domain name may be for sale."],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Page loading in a few seconds, please wait...- Darkrypt"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["The domain has expired. Is this your domain?"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["You are disconnected, please refresh page"],
+        "groupNames":[],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Not Found", "was not found on this server."],
+        "groupNames":["Donut_Files"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["An error occurred."],
+        "groupNames":["PLAY"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["(Kup tę domenę)|(Køb dette domæne)|(Comprar esse domínio)|(Domain erwerben)|(Buy this domain)|(Kjøp dette domenet)|(Acheter ce domaine)|(Купить этот домен)|(Acquistare questo dominio)|(Osta tämä verkkotunnus)|(Köp denna domän)|(Compre este dominio)"],
+        "groupNames":["DarkRypt"],
+        "regExp":true,
+        "note":""
+    },
+    {
+        "words":["(^Double your bitcoins fast.$)|(Choose amount of )|(Please enable Java Script for functionality!)|(Bitcoin Wallet Cracker)"],
+        "groupNames":["Dark_Leak_Market_New"],
+        "regExp":true,
+        "note":"ページ変更に伴い差分がえぐいのでこの文言あったら無視"
+    },
+    {
+        "words":["(^Copyright 2023)|(^Privacy Policy)|(^Do Not Sell or Share My Personal Information)|(^Die hier angezeigten Sponsored Listings)"],
+        "groupNames":["DarkRypt"],
+        "regExp":true,
+        "note":""
+    },
+    {
+        "words":["500 Internal Server Error"],
+        "regExp":false,
+        "note":"Ransomedで出たサーバーエラー"
+    },
+    {
+        "words":["Skip to content"],
+        "regExp":false,
+        "note":"",
+        "groupNames":["ransomed_vc_DoCoMo"]
+    },
+    {
+        "words":["アクセスしようとしているサイトを見つけられません"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["サーバーに接続できません"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["Kaspersky Lab"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["サイトが HTTPS に対応していない場合に表示"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["ERR_BLOCKED_BY_CLIENT"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["接続は安全ではありません"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["はブロックされています"],
+        "regExp":false,
+        "note":""
+    },
+    {
+        "words":["JavaScript is disabled."],
+        "regExp":false,
+        "groupNames":["HUNTERS_INTERNATIONAL", "HUNTERS_INTERNATIONAL_3"],
+        "note":"HUNTERS"
+    },
+    {
+        "words":["An Error Occurred"],
+        "regExp":false,
+        "note":"DarkRypt"
+    },
+    {
+        "words":["408 Request Time-out"],
+        "regExp":false,
+        "note":"DarkRypt"
+    },
+    {
+        "words":["Access Denied"],
+        "regExp":false,
+        "note":"DarkRypt"
+    },
+    {
+        "words":["Welcome to nginx"],
+        "regExp":false,
+        "note":"Meow"
+    }
+    ,
+    {
+        "words":["503 Service Temporarily Unavailable"],
+        "regExp":false,
+        "note":"Medusa"
+    }
+    ,
+    {
+        "words":["正常に接続できませんでした"],
+        "regExp":false,
+        "note":"MosesStaff"
+    },
+    {
+        "words":["Spatie\\LaravelIgnition\\Exceptions\\ViewException"],
+        "groupNames":["SpaceBears"],
+        "regExp":false,
+        "note":"SpaceBears:2024/7/12 9:21頃からHtmlのようなものが表示される。頻発するのでこの文言あったら無視"
+    }
+    ]
+}

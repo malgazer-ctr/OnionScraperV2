@@ -1,0 +1,101 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+
+<head>
+    <meta http-equiv="Content-Type"
+          content="text/html; charset=utf-8" />
+    <title></title>
+    <style type="text/css">
+        table,td {
+            border: 1px solid #333;
+            
+        }
+
+        thead,tfoot {
+            background-color: #333;
+            color: #fff;
+        }
+        
+        .title {
+            background-color: #333;
+            color: #fff;
+            font-weight: bold;
+        }   
+        .counterDisplay {
+            table-layout: fixed;
+        }          
+    </style>
+</head>
+
+<body>
+    <h3>■監視対象のレポート</h3>
+    ${statistics}
+
+    <table class="counterDisplay" border=1 style="border-collapse: collapse" cellpadding=3>
+        <tr>
+            <td width ="370" white-space="nowrap">監視対象URL総数(※1)</td>
+            <td>${totalCount}</td>
+          </tr>
+          <tr>
+            <td width ="370" white-space="nowrap">ランサムウェアグループのリークサイト件数(※2)</td>
+            <td>${ransomwareLeakSiteCount}</td>
+          </tr>
+          <tr>
+            <td width ="370" white-space="nowrap">　内アクティブ件数(※3)</td>
+            <td>${ransomwareLeakSiteCount_Active}</td>
+          </tr>
+          <tr>
+            <td width ="370" white-space="nowrap">　内非アクティブ件数</td>
+            <td>${ransomwareLeakSiteCount_InActive}</td>
+          </tr>
+          <tr>
+            <td width ="370" white-space="nowrap">その他サイト件数(※4)</td>
+            <td>${otherSiteCount}</td>
+          </tr>                        
+    </table>
+    <font size="-1">
+        ※1：表内全てのURLの総数<br>
+             リークサイトを暴露の活動拠点としているものを対象としています。(Telegramなどを拠点としているグループは除く)<br>
+        ※2：監視対象URLにおいて、ランサムウェア攻撃グループのリークサイトであるものの件数<br>
+             下記表「サイトの種類」で"RansowareLeakSite"と完全一致するものをカウントしています<br>
+        ※3：ランサムウェア攻撃グループのリークサイトの中で一週間以内にアクセスできたサイトの件数<br>
+             アクセスが初めて成功するまでは非アクティブとして扱われます。<br>
+        ※4：監視対象URLにおいて、ランサムウェア攻撃グループ以外のリークサイトや攻撃グループへの支払いサイト、特定被害組織の個別監視ページなどの件数<br>
+    </font>
+    <br>    
+
+    <!-- Site Status: <span style="background-color:#FFFF00"><font color="red">非アクティブのサイトがアクティブに変更された場合</font></span> -->
+    ステータス列: (n日)は初回アクセストライ時、もしくは前回アクセス成功時、もしくはシステム再起動時からの接続不可期間<br>    
+    前回アクセス: -1は前回アクセスの1回前、-2は2回前のアクセス。()内はアクセス時になんらかのHTMLが取得できたかどうか<br>
+    ◯：6日以内にアクセスできた(何らかのHTMLが取得できていて、かつサーバーエラーなどの無視辞書に該当がない)<br>
+    △：システム起動後、最終アクセス確認ができていない(まだ接続できていない等)<br>
+    ×：7日以上アクセスできていない<br>  
+    <table>
+        <thead>
+            <tr>
+                <th nowrap colspan="8">リークサイトのアクセスログ</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr class="title">
+                <td nowrap>グループ</td>
+                <td nowrap>ステータス</td>
+                <td nowrap>最後の成功</td>
+                <td nowrap>前回アクセス</td>
+                <td nowrap>前回アクセス-1</td>
+                <td nowrap>前回アクセス-2</td>
+                <td nowrap>URL</td>
+                <td nowrap>サイトの種類</td>
+            </tr>            
+            ${tableBody}
+        </tbody>
+    </table>
+    全てのアクセスログは以下フォルダから閲覧できます。<br>
+    ${collaborateFolderLink}
+    <br>
+    監視対象URL一覧<br>
+    ${leaksiteURL}
+</body>
+</html>
