@@ -1,4 +1,18 @@
 {
+  "TridentLocker": {
+    "urlList": [
+      "http://tridentfrdy6jydwywfx4vx422vnto7pktao2gyx2qdcwjanogq454ad.onion/articles"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment": "2025/11/30追加。"
+  },
+  "Benzona": {
+    "urlList": [
+      "http://benzona6x5ggng3hx52h4mak5sgx5vukrdlrrd3of54g2uppqog2joyd.onion"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment": "2025/11/27追加。"
+  },
   "Kazu_Ransom": {
     "urlList": [
       "http://6czlbd2jfiy6765fbnbnzuwuqocg57ebvp3tbm35kib425k4qnmiiiqd.onion/ransom.html"
@@ -447,9 +461,10 @@
   "Nova": {
     "SiteCategory": "RansowareLeakSite",
     "urlList": [
-      "http://novaxtychr6ohlc4zr5its73p6i7unpuhpwoodtzrg2y4w4seytatlid.onion"
+      "http://novadmrkp4vbk2padk5t6pbxolndceuc7hrcq4mjaoyed6nxsqiuzyyd.onion"
     ],
       "urlList_old": [
+      "http://novaxtychr6ohlc4zr5its73p6i7unpuhpwoodtzrg2y4w4seytatlid.onion",
       "http://novag4k2te3mstt2xq5irywlpaw6edgkpiwgg4t2q7eecisj2qqtvbid.onion",
       "http://novatd4577pzlvdyy42slydhrhru7fpcflbbxlajcmbfrgzyeis6d3id.onion",
       "http://novaoddh3vxylxqpsfdjprliknbzgbkv6nkazpzu3cvykrgpyzuywryd.onion",

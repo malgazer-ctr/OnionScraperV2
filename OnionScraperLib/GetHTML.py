@@ -2513,7 +2513,11 @@ def wrap_Func_scraping(driver, soup, groupName, url, forDetail = False, value=No
         ret = Func_scraping_Genesis(driver, soup, groupName, url, forDetail, value)
     elif uf.strstr('Kazu', groupName):
         ret = Func_scraping_Kazu(driver, soup, groupName, url, forDetail, value)
-   
+    elif uf.strstr('Benzona', groupName):
+        ret = Func_scraping_Benzona(driver, soup, groupName, url, forDetail, value)  
+    elif uf.strstr('TridentLocker', groupName):
+        ret = Func_scraping_TridentLocker(driver, soup, groupName, url, forDetail, value)  
+
     # 超絶あほくさいけどsummaryのスペルミスでsummaryになっているが、
     # 今更戻せないのでつじつま合わせ用に新規取得したやつはここでsummaryを作成する。
     # 今スペル修正すると影響範囲デカすぎるのでそれはいつかやる
@@ -9509,16 +9513,7 @@ def Func_scraping_RALord(driver, soup, groupName, url, forDetail, value):
     retDict = {}
     try:
         if forDetail:
-            nanimoshinai = True
-            # html = driver.page_source.encode('utf-8')
-            # soup = BeautifulSoup(html, 'html.parser')
-
-            # if soup != None:
-            #     # 被害組織説明取得
-            #     # elem = soup.find(class_='card-text')
-            #     elem = soup.find(class_ = "post-content")
-            #     if elem != None:
-            #         value['summary'] = getTextAll(groupName, elem)
+            pass
         else:
             if soup != None:
                 cards = soup.find_all(class_ = 'post-card')
@@ -10599,8 +10594,8 @@ def Func_scraping_PayoutsKing(driver, soup, groupName, url, forDetail, value):
                         
                         cells = row.find_all('td')
                         if len(cells) >= 9:  # 全カラムが存在する場合
-                            victimName = cells[1].get_text(strip=True)
-                            updateDate = cells[0].get_text(strip=True)
+                            victimName = cells[0].get_text(strip=True)
+                            updateDate = cells[1].get_text(strip=True)
                             urlStr = cells[2].get_text(strip=True)
                             summary = cells[4].get_text(strip=True) #country
                             
@@ -11825,5 +11820,116 @@ def Func_scraping_Kazu(driver, soup, groupName, url, forDetail, value):
                             retDict[victimName] = {'updateDate':updateDate, 'url': urlStr, 'summary':summary, 'detectedDate':uf.getDateTime('%Y/%m/%d %H:%M'), 'detailUrl':detailUrl}
     except Exception as e:
         Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
+
+    return retDict
+
+def Func_scraping_Benzona(driver, soup, groupName, url, forDetail, value):
+    retDict = {}
+    try:
+        if forDetail:
+            pass
+        else:
+            if soup is not None:
+                cards = soup.find_all(class_='victim-card')
+                if len(cards) > 0:
+                    for i in cards:
+                        victimName = ''
+                        summary = ''
+                        urlStr = ''
+                        updateDate = ''
+                        detailUrl = ''
+
+                        elem = i.find('h3')
+                        if elem is not None:
+                            victimName = elem.get_text(strip=True)
+
+                        if victimName:
+                            # 「Leak Date」を含む <p> を探す
+                            leak_p = None
+                            for p in i.find_all('p'):
+                                strong_tag = p.find('strong')
+                                if strong_tag and 'Leak Date' in strong_tag.get_text():
+                                    leak_p = p
+                                    break
+
+                            if leak_p is not None:
+                                # 例: "<strong>Leak Date:</strong> 30.11.2025"
+                                text = leak_p.get_text(" ", strip=True)
+                                # 「Leak Date: 30.11.2025」→「30.11.2025」にする
+                                if ':' in text:
+                                    updateDate = text.split(':', 1)[1].strip()
+                                else:
+                                    updateDate = text
+
+                            # 被害組織名,掲載時刻、更新時刻取得,被害組織説明,被害組織URL,
+                            # その他情報(被害組織概要),詳細ページURL
+                            retDict[victimName] = {
+                                'updateDate': updateDate,
+                                'url': urlStr,
+                                'summary': summary,
+                                'detectedDate': uf.getDateTime('%Y/%m/%d %H:%M'),
+                                'detailUrl': detailUrl
+                            }
+    except Exception as e:
+        Log.LoggingWithFormat(
+            groupName,
+            logCategory='E',
+            logtext=f'args:{str(e.args)},msg:{str(e.msg)}'
+        )
+
+    return retDict
+
+def Func_scraping_TridentLocker(driver, soup, groupName, url, forDetail, value):
+    retDict = {}
+    try:
+        if forDetail:
+            html = driver.page_source.encode('utf-8')
+            soup = BeautifulSoup(html, 'html.parser')
+
+            if soup != None:
+                # 被害組織説明取得
+                elem = soup.find(class_ = 'blog-article')
+                if elem != None:
+                    summary = getTextAll(groupName, elem)
+                    if len(summary):
+                        value['summary'] = summary
+        else:
+            if soup is not None:
+                cards = soup.find_all(class_='article')
+                if len(cards) > 0:
+                    for i in cards:
+                        victimName = ''
+                        summary = ''
+                        urlStr = ''
+                        updateDate = ''
+                        detailUrl = ''
+
+                        elem = i.find('h2')
+                        if elem:
+                            victimName = elem.get_text(strip=True)
+
+                        if victimName:
+                            elem = i.find('p')
+                            updateDate = elem.get_text(strip=True)
+                            updateDate = re.search(r'(\d{1,2})\.(\d{1,2})\.(\d{4})',updateDate).group(0)
+                            elem = i.find('a')
+                            if elem:
+                                detailUrl = urllib.parse.urljoin(url, elem.get('href'))
+                            
+                            # 被害組織名,掲載時刻、更新時刻取得,被害組織説明,被害組織URL,
+                            # その他情報(被害組織概要),詳細ページURL
+                            retDict[victimName] = {
+                                'updateDate': updateDate,
+                                'url': urlStr,
+                                'summary': summary,
+                                'detectedDate': uf.getDateTime('%Y/%m/%d %H:%M'),
+                                'detailUrl': detailUrl
+                            }
+    except Exception as e:
+        Log.LoggingWithFormat(
+            groupName,
+            logCategory='E',
+            logtext=f'args:{str(e.args)},msg:{str(e.msg)}'
+        )
 
     return retDict

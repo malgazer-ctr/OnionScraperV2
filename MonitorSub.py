@@ -1261,8 +1261,13 @@ def getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup):
                             # 被害組織の情報を生成AIに問い合わせ
                             # ------------------------------------------------------------------
                             for key in newItems.keys():
-                                investigateVictimsInfoAIDict = investigateVictimsInfoAI(groupName, key, newItems[key].get('url', ''))
-
+                                url = newItems[key].get('url', '')
+                                start = time.time()
+                                investigateVictimsInfoAIDict = investigateVictimsInfoAI(groupName, key, url)
+                                end = time.time()
+                                elapsed = end - start
+                                print(f"[END] investigateVictimsInfoAI groupName={groupName}, key={key}, url={url}, elapsed={elapsed:.3f} sec")
+                                
                                 if len(investigateVictimsInfoAIDict) > 0:
                                     # inevstigateVictimsInfoAIArray.append({key:inevstigateVictimsInfoAIDict})
                                     investigateVictimsInfoAIDic[key] = {}

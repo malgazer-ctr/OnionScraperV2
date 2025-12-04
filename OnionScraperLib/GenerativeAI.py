@@ -408,37 +408,42 @@ def requestVictimsInfo_ChatGPT(victimsName, victimsURL=''):
                 kwargs["temperature"] = 0
             return client.chat.completions.create(**kwargs)
 
-        # --- A案: Responses API で実行（温度あり→温度なしの順で） ---
-        try:
+        # 実装してみたけどどれも例外になるからいったん保留
+        skipTries = True
+        if skipTries:
+            # --- A案: Responses API で実行（温度あり→温度なしの順で） ---
             try:
-                resp = _responses_try(with_temperature=True)
-            except Exception as e:
-                msg = str(e).lower()
-                if ("temperature" in msg and "incompatible" in msg) or ("unsupported" in msg and "temperature" in msg) or ("invalid_request_error" in msg and "temperature" in msg):
-                    resp = _responses_try(with_temperature=False)
-                else:
-                    raise
-            return ("responses", resp)
-        except Exception:
-            pass  # Chat 側にフォールバック
+                try:
+                    resp = _responses_try(with_temperature=True)
+                except Exception as e:
+                    msg = str(e).lower()
+                    if ("temperature" in msg and "incompatible" in msg) or ("unsupported" in msg and "temperature" in msg) or ("invalid_request_error" in msg and "temperature" in msg):
+                        resp = _responses_try(with_temperature=False)
+                    else:
+                        raise
+                return ("responses", resp)
+            except Exception:
+                pass  # Chat 側にフォールバック
 
-        # --- B案: Chat Completions で実行（同様に温度あり→なし） ---
-        try:
+            # --- B案: Chat Completions で実行（同様に温度あり→なし） ---
             try:
-                resp = _chat_try(with_temperature=True)
+                try:
+                    resp = _chat_try(with_temperature=True)
+                except Exception as e:
+                    msg = str(e).lower()
+                    if ("temperature" in msg and "incompatible" in msg) or ("unsupported" in msg and "temperature" in msg) or ("invalid_request_error" in msg and "temperature" in msg):
+                        resp = _chat_try(with_temperature=False)
+                    else:
+                        # 例：SEARCH_MODEL が存在しない場合など。ここでフォールバックしてもOK
+                        # 任意: gpt-4o-search-preview へ切替
+                        # resp = client.chat.completions.create(..., model="gpt-4o-search-preview", ...)
+                        raise
+                return ("chat", resp)
             except Exception as e:
-                msg = str(e).lower()
-                if ("temperature" in msg and "incompatible" in msg) or ("unsupported" in msg and "temperature" in msg) or ("invalid_request_error" in msg and "temperature" in msg):
-                    resp = _chat_try(with_temperature=False)
-                else:
-                    # 例：SEARCH_MODEL が存在しない場合など。ここでフォールバックしてもOK
-                    # 任意: gpt-4o-search-preview へ切替
-                    # resp = client.chat.completions.create(..., model="gpt-4o-search-preview", ...)
-                    raise
-            return ("chat", resp)
-        except Exception as e:
-            # 上位の再試行ループに任せる
-            raise e
+                # 上位の再試行ループに任せる
+                raise e
+        else:
+            resp = _chat_try(with_temperature=False)
 
     def extract_json_str_from_responses(resp) -> str:
         """
