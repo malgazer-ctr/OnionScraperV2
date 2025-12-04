@@ -230,7 +230,11 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
         isSkip = False
         interval = 60*3
         accessLog = Log.getAccessLogPath(groupName)
-        logArray = Log.readAccessLog(groupName, accessLog)
+        if getattr(Log, 'g_Lock', None) is not None:
+            with Log.g_Lock:
+                logArray = Log.readAccessLog(groupName, accessLog)
+        else:
+            logArray = Log.readAccessLog(groupName, accessLog)
 
         if len(logArray) > 0:
             lastAccess = logArray[0].get('accessEndTime', '')
@@ -331,7 +335,11 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
                 # 既存データに今回データを追加
                 newDataArray.append(benchmarkStruct)
                 accessLogStruct['log'] = newDataArray
-                Log.saveAccessLog2File(groupName, accessLogStruct, cf.PATH_BENCHMARK_FILE)
+                if getattr(Log, 'g_Lock', None) is not None:
+                    with Log.g_Lock:
+                        Log.saveAccessLog2File(groupName, accessLogStruct, cf.PATH_BENCHMARK_FILE)
+                else:
+                    Log.saveAccessLog2File(groupName, accessLogStruct, cf.PATH_BENCHMARK_FILE)
         Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'scrape_url: Write PATH_BENCHMARK_FILE End', note = threadGroupName)
 
     except Exception as e:
@@ -559,7 +567,7 @@ def main_threadVer():
             # targetGroupDic_Active.update(targetGroupDic_UseSeleniumBase)
 
             cf.headless_options = 2
-            groupNameList = ['Sinobi']
+            groupNameList = ['AKIRA']
 
         # 同時に実行するスレッド数の上限
         MAX_THREADS = 5
