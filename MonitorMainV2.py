@@ -266,6 +266,9 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
             if len(urlList) > 0:
                 portForGroup = 9070
                 if useBrave == False:
+                    DataDirectoryPath = ''
+                    torConfigfile = ''
+                    webDriverTempDir = ''
                     try:
                         portForGroup = targetGroupDic[groupName]['sockPort']
                 
@@ -293,15 +296,25 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
                         # この時点でwebDriverTempDirが存在しないとExceptionになる
                         ProcessTerminateTree(groupName, pid)
 
-                        # Chromeで使った一時ファイルがたまるので削除
-                        # import shutil
-                        # while True:
-                        #     shutil.rmtree(webDriverTempDir)
-                        #     shutil.rmtree(DataDirectoryPath)
-                        #     fo.Func_DeleteFile(torConfigfile)
-                        #     if not fo.Func_IsFileExist(webDriverTempDir) and not fo.Func_IsDirectoryExist(DataDirectoryPath) and not fo.Func_IsFileExist(torConfigfile):
-                        #         break
-                        #     time.sleep(1)
+                        cleanup_paths = [
+                            ('webdriver temp dir', webDriverTempDir),
+                            ('tor data dir', DataDirectoryPath),
+                        ]
+                        for label, target_path in cleanup_paths:
+                            if target_path:
+                                for attempt in range(3):
+                                    try:
+                                        if os.path.isdir(target_path):
+                                            shutil.rmtree(target_path)
+                                        elif os.path.exists(target_path):
+                                            os.remove(target_path)
+                                        break
+                                    except Exception as cleanup_err:
+                                        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'cleanup({label}) failed on attempt {attempt+1}: {cleanup_err}', note = '')
+                                        time.sleep(1)
+
+                        if torConfigfile:
+                            fo.Func_DeleteFile(torConfigfile)
 
             Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'scrape_url:ProcessTerminateTree End', note = threadGroupName)
         else:
@@ -536,7 +549,7 @@ def main_threadVer():
 
         # ---------------------------------------------------------------------------------------------------------------
         # ---------------------------------------------------------------------------------------------------------------
-        isDebug = True
+        isDebug = False
 
         # ---------------------------------------------------------------------------------------------------------------
         # ---------------------------------------------------------------------------------------------------------------
