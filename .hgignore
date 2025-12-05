@@ -1,0 +1,23 @@
+syntax: glob
+*/__pycache__/*
+*/*back*/*
+__pycache__/*
+old/*
+Data/HTMLdiff_Data - コピー/*
+Tor_______________/*
+Tor Browser/*
+Data/HTMLdiff_ResultFiles/*
+Data/HTMLdiff_Data/*
+Config/TargetURLSub/*
+Data/*
+*.log
+Config/TargetURL - コピー.csv
+back/*
+diffutils-3.8/*
+Config_back*.*
+Config_back*
+Config/torConfig/*
+*.bak
+*.lock
+*backup*
+*BackUp*
