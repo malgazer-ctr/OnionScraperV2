@@ -1455,9 +1455,11 @@ def ConvertVictimsData2MailBodyData(groupName,
 
     # 日本関連組織の可能性
     if len(japanRelatedOrganizations_VicList) > 0:
-        retData['important_info']['ai_RelationJP'] = []
-        retData['important_info']['ai_RelationJP'] = japanRelatedOrganizations_VicList
-        retUrgentFlg = True
+        if victimsRelationJPByAI.startswith('あり'):
+            retData['important_info']['ai_RelationJP'] = []
+            retData['important_info']['ai_RelationJP'] = japanRelatedOrganizations_VicList
+
+            retUrgentFlg = True
 
     # AIによる日本語検知
     if len(importantWordsList_jp) > 0:
