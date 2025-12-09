@@ -3,4 +3,22 @@
 back/*
 /Data/
 /Config/BackUpTargetURL/
+*.back
 *.bak
+/Config/torConfig/multi_torrc/
+/Tor Browser/
+/logs/
+/__pycache__/
+*__pycache__*
+_requirements.txt
+202409-202409.csv
+MonitorMainV2_SingleSiteChk.py.orig
+OnionScraperV2_2025_0611_1940.zip
+output.csv
+run_output_2025_0910_1500.txt
+temp_cleaner.log
+WebDriver/_geckodriver_v036.exe
+WebDriver/geckodriver_v036.exe
+V2_SingleLeakSiteCrawler.bat - ショートカット.lnk
+リークサイト掲載データ_202409-202409.csv
+TestCode.py

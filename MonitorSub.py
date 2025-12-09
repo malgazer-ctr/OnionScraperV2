@@ -6,6 +6,7 @@ import threading
 import subprocess
 import psutil
 import time
+import traceback
 from datetime import datetime, timedelta
 from string import Template
 from PIL import Image
@@ -20,10 +21,14 @@ from OnionScraperLib import SetupBrowser as sb
 from OnionScraperLib import Log
 from OnionScraperLib import GenerativeAI as ga
 from OnionScraperLib import BoxAPI as ba
+from OnionScraperLib import GroupLogger as groupLogger
 from tkinter import messagebox,Tk
 import cv2
 import hashlib
 import json
+
+def log_branch(group_name, stage, decision, detail=None):
+    groupLogger.log(group_name, stage, f'{decision}', detail)
 
 g_groupName = ''
 
@@ -132,7 +137,16 @@ def wrap_getHTMLData(groupName, driver, url, excludeIgnoreText = False, groupCon
             Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'HTMLデータ取得失敗')
 
     except Exception as e:
-        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'{str(e.args)}')
+        error_text = str(e.args)
+        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'{error_text}')
+        groupLogger.log(groupName, 'notify_error', 'exception in getHTMLDiffandNotification', {
+            'error': error_text,
+            'traceback': traceback.format_exc()
+        })
+        groupLogger.log(groupName, 'notify_error', 'exception in getHTMLDiffandNotification', {
+            'error': error_text,
+            'traceback': traceback.format_exc()
+        })
     
     return retOuterHtmlText, htmlData, victimsDict, IsIndivisialScrapingTarget, retCode
 
@@ -201,7 +215,12 @@ def generateDiffDataHTML(resultFileBefore, resultFileAfter, groupName):
                         # # WinmergeでHtmlとか作成
                         # difffHTML = df.createWinmergeReport(resultFileBefore, resultFileAfter, os.path.join(cf.PATH_HTMLDIFF_DATA, groupName), requirePDF = False)
     except Exception as e:
-        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'{str(e.args)}')
+        error_text = str(e.args)
+        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'{error_text}')
+        groupLogger.log(groupName, 'notify_error', 'exception in getHTMLDiffandNotification', {
+            'error': error_text,
+            'traceback': traceback.format_exc()
+        })
 
     return diffPlane, difffHTML, diffFileSize_Before, diffFileSize_After, diffHTMLFilePath, diffPDFFilePath
 
@@ -975,6 +994,7 @@ g_sentMailCount_DriverErr = 0
 def getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup):
     global g_sentMailCount_DriverErr
     Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'getHTMLDiffandNotification Start')
+    groupLogger.log(groupName, 'notify_start', 'getHTMLDiffandNotification start', {'url': url})
 
     retCode = cf.SUB_RETURNCODE_ERR
 
@@ -1069,7 +1089,10 @@ def getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup):
         headless = targetGroupDic[groupName].get('headless', True)
 
         if detectDiffSwitch == False:
+            log_branch(groupName, 'diff_switch', 'disabled', {'forceNotification': forceNotification})
             return 0
+        else:
+            log_branch(groupName, 'diff_switch', 'enabled')
 
         # ------------------------------------------------------------------
         # ドライバ取得
@@ -1579,6 +1602,7 @@ def getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup):
                                 dicForMailBody['diffDetectedTime'] = f"{days}日 {hours:02d}時間 {minutes:02d}分"
 
                                 mailBody = Notification.CreateNotificationMailBody(dicForMailBody)
+                                log_branch(groupName, 'mail_body_path', 'AI_generated', {'newItems': len(sNewItems), 'deleted': len(deletedItems)})
                             except Exception as e:
                                 Notification.sendMail(f'{groupName}:ConvertVictimsData2MailBodyData', "V2差分検知：[監視システムエラー]", cf.SENDTO_REPORT_YUICHI)
                         else:
@@ -1605,13 +1629,21 @@ def getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup):
                                     setUrgentFlgByAI_VicList,
                                     importantWordsList_jp,
                                     importantWordsReplaceList_jp,
-                                    )
+                                     )
+                            log_branch(groupName, 'mail_body_path', 'fallback_template', {'newItems': len(sNewItems), 'deleted': len(deletedItems)})
 
                         if uf.strstr('【ERROR】', mailBody):
+                            groupLogger.log(groupName, 'email_error_body', 'mailBody contains ERROR marker, sending error report', {'subject': "V2差分検知：[監視システムエラー]", 'recipients': cf.SENDTO_REPORT_YUICHI})
                             Notification.sendMail(mailBody, "V2差分検知：[監視システムエラー]", cf.SENDTO_REPORT_YUICHI)
                         else:
                             if mailBody:
                                 Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'メール送信直前')
+                                groupLogger.log(groupName, 'mail_body_ready', '通知メール本文が成立した', {
+                                    'newItems': len(sNewItems),
+                                    'deletedItems': len(deletedItems),
+                                    'urgent': setMailUrgentFlg,
+                                    'retCode': retCode
+                                })
 
                                 subject = Notification.createSubject_HTMLVer(
                                     groupName,
@@ -1646,20 +1678,44 @@ def getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup):
                                 if sendNotificationMail:
                                     attatchImage = targetGroupDic[groupName].get('attatchImage', False)
 
-                                    # DEBUG = False
+                                    # DEBUG = True
                                     # if DEBUG:
-                                    #     SendSuccess = Notification.sendMail(mailBody, subject, cf.SENDTO_REPORT_YUICHI, resultPNGBeforeTmp, resultPNGAfterTmp, resultPNGDiffTmp, setMailUrgentFlg, newItems, attatchImage = attatchImage)
+                                    #     isSendSuccess = Notification.sendMail(mailBody, subject, cf.SENDTO_REPORT_YUICHI, resultPNGBeforeTmp, resultPNGAfterTmp, resultPNGDiffTmp, setMailUrgentFlg, newItems, attatchImage = attatchImage)
                                     # else:
+                                    groupLogger.log(groupName, 'email_send_attempt', 'about to call Notification.sendMail', {
+                                        'subject': subject,
+                                        'recipients': sendTo,
+                                        'attachImage': attatchImage,
+                                        'newItems': len(newItems),
+                                        'retCode': retCode
+                                    })
                                     isSendSuccess = Notification.sendMail(mailBody, subject, sendTo, resultPNGBeforeTmp, resultPNGAfterTmp, resultPNGDiffTmp, setMailUrgentFlg, newItems, attatchImage = attatchImage)
 
                                     if isSendSuccess:
                                         Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'メール送信完了')
+                                        groupLogger.log(groupName, 'email_send_success', 'Notification.sendMail succeeded', {'recipients': sendTo, 'retCode': retCode})
                                     else:
                                         detectedCompany = ''
                                         if len(sNewItems):
                                             detectedCompany = '<br><br>■被害組織<br>' + '<br><br>'.join(sNewItems.keys())
 
                                         Notification.sendMail_Nofication(f'メール送信失敗の可能性<br>■グループ名<br>{groupName}{detectedCompany}', '【重要】システムエラー', cf.SENDTO_REPORT_YUICHI)
+                                        groupLogger.log(groupName, 'email_send_failed', 'Notification.sendMail reported failure', {
+                                            'retCode': retCode,
+                                            'recipients': sendTo,
+                                            'detectedItems': detectedCompany
+                                        })
+                                else:
+                                    groupLogger.log(groupName, 'email_skipped', 'sendNotificationMail flag false', {
+                                        'sendNotificationMail': sendNotificationMail,
+                                        'SiteCategory': targetGroupDic[groupName].get('SiteCategory', ''),
+                                        'retCode': retCode
+                                    })
+                            else:
+                                groupLogger.log(groupName, 'mail_body_empty', 'mailBody is empty, skipping Notification.sendMail', {
+                                    'retCode': retCode,
+                                    'sendNotificationMail': sendNotificationMail
+                                })
                 try:
                     # 0KBならBeforeに上書きはしない
                     # TODO:コード整理するとき以下の条件は見直せるかも。というか必要ないかも？
@@ -1699,7 +1755,12 @@ def getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup):
             Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'差分検知処理スキップ(Html取得失敗)')
 
     except Exception as e:
-        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'{str(e.args)}')
+        error_text = str(e.args)
+        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'{error_text}')
+        groupLogger.log(groupName, 'notify_error', 'exception in getHTMLDiffandNotification', {
+            'error': error_text,
+            'traceback': traceback.format_exc()
+        })
 
     finally:
         if driver != None:
@@ -1804,6 +1865,7 @@ def getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup):
 
         # fo.clean_temp_folder(webDriverTempDir)
 
+    groupLogger.log(groupName, 'notify_end', 'getHTMLDiffandNotification finished', {'retCode': retCode})
     Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'getHTMLDiffandNotification End')
 
     return retCode, webDriverTempDir

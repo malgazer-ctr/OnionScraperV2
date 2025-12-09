@@ -1,4 +1,14 @@
 {
+  "Lockbit5.0": {
+    "urlList": [
+      "http://lockbitapt67g6rwzjbcxnww5efpg4qok6vpfeth7wx3okj52ks4wtad.onion"
+    ],
+    "urlList_old": [
+      "http://lockbitfbinpwhbyomxkiqtwhwiyetrbkb4hnqmshaonqxmsrqwg7yad.onion"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment": "2025/9/5追加。リークサイト2025/12/5追加"
+  }, 
   "TridentLocker": {
     "urlList": [
       "http://tridentfrdy6jydwywfx4vx422vnto7pktao2gyx2qdcwjanogq454ad.onion/articles"
@@ -148,14 +158,6 @@
     "SiteCategory": "RansowareLeakSite",
     "comment": "2025/9/6追加。"
   },
-  "Lockbit5.0": {
-    "urlList": [
-      "http://lockbitfbinpwhbyomxkiqtwhwiyetrbkb4hnqmshaonqxmsrqwg7yad.onion"
-    ],
-    "SiteCategory": "RansowareLeakSite(被害者専用)",
-    "comment": "2025/9/5追加。",
-    "detectDiffSwitch":false
-  }, 
   "Obscura": {
     "urlList": [
       "http://obscurad3aphckihv7wptdxvdnl5emma6t3vikcf3c5oiiqndq6y6xad.onion"
@@ -761,7 +763,8 @@
     "url": "http://lockbitapt2d73krlbewgv27tquljgxr33xbwwsp6rkyieto7u4ncead.onion/",
     "SiteCategory": "LeakSite(Mirror)",
     "IsActive": "Active",
-    "comment": "2024/10/1追加。"
+    "comment": "2024/10/1追加。",
+    "detectDiffSwitch":false
   },
   "NITROGEN": {
     "url": "http://nitrogenczslprh3xyw6lh5xyjvmsz7ciljoqxxknd7uymkfetfhgvqd.onion",
@@ -817,7 +820,8 @@
       "LockBit3.0_2024_1",
       "LockBit3.0_2024_2",
       "LockBit3.0_2024_4"
-    ]
+    ],
+    "detectDiffSwitch":false
   },
   "MAD_LIBERATOR": {
     "url": "http://k67ivvik3dikqi4gy4ua7xa6idijl4si7k5ad5lotbaeirfcsx4sgbid.onion/",
@@ -882,7 +886,8 @@
       "Type": "Class",
       "Name": "page-wrapper"
     },
-    "comment": "2024/6/27追加。"
+    "comment": "2024/6/27追加。",
+    "detectDiffSwitch":false
   },
   "BLACKSUIT": {
     "url": "http://weg7sdx54bevnvulapqu6bpzwztryeflq3s23tegbmnhkbpqz637f2yd.onion",
@@ -918,7 +923,8 @@
     "relativeGroup": [
       "LockBit3.0_2024_1",
       "LockBit3.0_2024_2"
-    ]
+    ],
+    "detectDiffSwitch":false
   },
   "Cicada3301": {
     "url": "http://cicadabv7vicyvgz5khl7v2x5yygcgow7ryy6yppwmxii4eoobdaztqd.onion",
@@ -1133,7 +1139,8 @@
       "Type": "Class",
       "Name": "page-wrapper"
     },
-    "comment": "2024/4/15追加。"
+    "comment": "2024/4/15追加。",
+    "detectDiffSwitch":false
   },
   "DARK_VAULT_3(LikeLockBit)": {
     "url": "http://mdhby62yvvg6sd5jmx5gsyucs7ynb5j45lvvdh4dsymg43puitu7tfid.onion/",
@@ -1225,7 +1232,8 @@
       "LockBit3.0_2024_2",
       "LockBit3.0_2024_4",
       "LockBit3.0_2024_6"
-    ]
+    ],
+    "detectDiffSwitch":false
   },
   "STORMOUS_Portal": {
     "url": "http://stmxylixiz4atpmkspvhkym4xccjvpcv3v67uh3dze7xwwhtnz4faxid.onion",
@@ -1684,7 +1692,8 @@
     "siteStatus": "成功",
     "lastAccessSuccessTime": "2023/11/20 12:47:47",
     "firstAccessTime": "2023/03/23 23:14:32",
-    "elapsedTime": ""
+    "elapsedTime": "",
+    "detectDiffSwitch":false
   },
   "LockBit3.0_2024_2": {
     "url": "http://lockbit3g3ohd3katajf6zaehxz4h4cnhmz5t735zpltywhwpc6oy3id.onion",
@@ -1695,7 +1704,8 @@
       "LockBit3.0_2024_1",
       "LockBit3.0_2024_4",
       "LockBit3.0_2024_6"
-    ]
+    ],
+    "detectDiffSwitch":false
   },
   "Lorenz": {
     "url": "http://lorenzmlwpzgxq736jzseuterytjueszsvznuibanxomlpkyxk6ksoyd.onion",
@@ -3089,7 +3099,8 @@
     "elapsedTime": "",
     "siteStatus": "成功",
     "prevAccessTime": "2023/11/20 13:09:07",
-    "prevSiteStatus": "失敗"
+    "prevSiteStatus": "失敗",
+    "detectDiffSwitch":false
   },
   "CipherLocker": {
     "url": "http://xad4pa73jkwt2dwgv75mri6oeqzxx4kmw7om3f6ca2bwoj357ddo3zid.onion/Leaks.html",

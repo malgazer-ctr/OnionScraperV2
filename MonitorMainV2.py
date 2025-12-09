@@ -18,6 +18,7 @@ from OnionScraperLib import GetHTML as gh
 from OnionScraperLib import SetupBrowser as sb
 from OnionScraperLib import utilFuncs as uf
 from OnionScraperLib import Log
+from OnionScraperLib import GroupLogger as groupLogger
 import MonitorSub as ms
 
 g_TargetGroupDic = {}
@@ -55,6 +56,7 @@ def init():
     fo.Func_CreateDirectry(cf.PATH_NOTIFIED_IMPORANT_INFO)
     fo.Func_CreateDirectry(cf.PATH_SCREENSHOT_DIFF_DIR)
     fo.Func_CreateDirectry(cf.PATH_OUTERHTML_TEXT)
+    fo.Func_CreateDirectry(cf.PATH_LOG2_ROOT)
 
     cf.g_logMainFolderId, cf.g_shareFolderLink = ba.BOX_SetAccessLogStockFolder('MainProc')
 
@@ -222,6 +224,7 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
 
     # while True:  # 無限に繰り返し
     try:
+        groupLogger.log(groupName, 'scrape_sched', 'scrape_url invoked', {'isActive': isActive, 'thread': threadGroupName})
         benchmarkStruct = {}
         benchmarkStruct['groupName'] = groupName
         benchmarkStruct['start'] = time_str1 = uf.getDateTime('%Y年%m月%d日 %H時%M分%S秒')
@@ -262,6 +265,7 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
             urlList = targetGroupDic[groupName].get('urlList', [])
             if len(urlList) == 0:
                 urlList.append(targetGroupDic[groupName].get('url', ''))
+            groupLogger.log(groupName, 'scrape_start', 'begin scraping loop', {'urlCount': len(urlList)})
 
             if len(urlList) > 0:
                 portForGroup = 9070
@@ -271,6 +275,7 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
                     webDriverTempDir = ''
                     try:
                         portForGroup = targetGroupDic[groupName]['sockPort']
+                        groupLogger.log(groupName, 'tor_setup', 'starting tor process', {'port': portForGroup})
                 
                         # TODO:TORの設定と起動処理ってサブ側でやったほうがいいかも。。。困ってないからいったん保留
                         # Torの設定ファイルとデータフォルダを生成
@@ -284,10 +289,12 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
                     try:
                         for url in urlList:
                             Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'scrape_url:getHTMLDiffandNotification Start', note = threadGroupName)
+                            groupLogger.log(groupName, 'scrape_gethtml_start', 'calling getHTMLDiffandNotification', {'url': url})
 
                             retCode, webDriverTempDir = ms.getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup)
 
                             Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'scrape_url:getHTMLDiffandNotification End', note = threadGroupName)
+                            groupLogger.log(groupName, 'scrape_gethtml_end', 'getHTMLDiffandNotification returned', {'retCode': retCode})
 
                             # break
                             if retCode & cf.SUB_RETURNCODE_GETHTML:
@@ -295,6 +302,7 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
                     finally:
                         # この時点でwebDriverTempDirが存在しないとExceptionになる
                         ProcessTerminateTree(groupName, pid)
+                        groupLogger.log(groupName, 'cleanup', 'ProcessTerminateTree completed')
 
                         cleanup_paths = [
                             ('webdriver temp dir', webDriverTempDir),
@@ -319,6 +327,7 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
             Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'scrape_url:ProcessTerminateTree End', note = threadGroupName)
         else:
             Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'isSkip==True', note = threadGroupName)
+            groupLogger.log(groupName, 'scrape_skip', 'skipped because interval threshold not met')
 
         benchmarkStruct['end'] = time_str2 = uf.getDateTime('%Y年%m月%d日 %H時%M分%S秒')
         # 文字列を datetime オブジェクトに変換
@@ -358,6 +367,7 @@ def scrape_url(groupName, targetGroupDic, isActive = 'Active', threadGroupName =
     except Exception as e:
         error_message = f"{str(e)}\n{traceback.format_exc()}"
         Log.LoggingWithFormat(groupName = groupName, logCategory='E', logtext=error_message, note = threadGroupName)
+        groupLogger.log(groupName, 'scrape_error', 'exception occurred', {'error': str(e), 'traceback': traceback.format_exc()})
 
     Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'scrape_url: End', note = threadGroupName)
     return retCode
@@ -580,7 +590,7 @@ def main_threadVer():
             # targetGroupDic_Active.update(targetGroupDic_UseSeleniumBase)
 
             cf.headless_options = 2
-            groupNameList = ['AKIRA']
+            groupNameList = ['Lockbit5.0']
 
         # 同時に実行するスレッド数の上限
         MAX_THREADS = 5

@@ -98,6 +98,9 @@ PATH_ALLLOG_EXCEPTION_FILE = os.path.join(PATH_LOG_DIR, r'Crawl_All_Exception.lo
 PATH_BENCHMARK_FILE = os.path.join(PATH_LOG_DIR, r'Benchmark.log')
 PATH_ACCESSLOG_FILE = os.path.join(PATH_LOG_DIR, r'AccessLog.log')
 FILE_PATH_ACCESSLOG_GENERAL = os.path.join(PATH_CURRNET, r'Data\Log\AccessLogGeneral.log')
+PATH_LOG2_ROOT = os.path.join(PATH_CURRNET, r'Data\Log2')
+LOG2_ENABLED = True
+LOG2_RETENTION_DAYS = 7
 
 # -------------------------------------------------------------------------------------------
 # 排他制御用のロックファイル

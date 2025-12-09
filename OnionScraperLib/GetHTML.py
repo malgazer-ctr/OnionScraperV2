@@ -5,7 +5,9 @@ import sys
 import time
 import re
 import cv2
+import numpy as np
 import base64
+import math
 import urllib
 import urllib.parse
 import requests
@@ -28,6 +30,8 @@ from OnionScraperLib import utilFuncs as uf
 from Config import Config as cf
 from OnionScraperLib import FileOperate as fo
 from OnionScraperLib import SetupBrowser as sb
+from OnionScraperLib import GenerativeAI as ga
+from OnionScraperLib import GroupLogger as groupLogger
 
 #スクリーンショット全体の何割を監視するか（0.5なら上から半分の領域だけを比較監視）
 check_img_bunkatu = 0.5
@@ -534,7 +538,12 @@ def goTargetUrl(driver, url, groupName):
                 time.sleep(3)
 
     except Exception as e:
-        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
+        error_text = str(e)
+        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'error:{error_text}')
+        groupLogger.log(groupName, 'Func_scraping_AKIRA_error', 'exception during AKIRA scraping', {
+            'error': error_text,
+            'args': e.args
+        })
 
 def wrap_getURL(driver, url, groupName):
     try:
@@ -580,8 +589,6 @@ def wrap_getURL(driver, url, groupName):
 
 def clearCaptha(groupName, driver, soup, url):
     ret = soup
-    import base64
-    from OnionScraperLib import GenerativeAI as ga
 
     def saveCAPTCHAImage(groupName, pngData):
         try:
@@ -596,411 +603,716 @@ def clearCaptha(groupName, driver, soup, url):
 
     try:        
         if uf.strstr(groupName, 'MedusaBlog'):
-            retly = False
-            ret = None
-            # imgタグを探してsrc属性を取得
-            img_tag = soup.find('img', {'id': 'captcha-image'})
-            src_value = img_tag['src'] if img_tag else None
-
-            if src_value:
-                time.sleep(10)
-                pngData = Func_FindElementByClassName(driver, 'captcha-image-wrapper').screenshot_as_png
-
-                if pngData:
-                    # 中のテキストが表示されるまで時間がかかる
-                    filePath = saveCAPTCHAImage(groupName, pngData)
-
-                    captchaTxt = ga.request_openai_vision_latest(image_path = filePath)
-
-                    # MedusaはCAPTCHAのテキストに数字はいらないのでチェック
-                    captchaTxt = captchaTxt.lower()
-                    if bool(re.search(r'\d', captchaTxt)) == False:
-                        captcha_input = driver.find_element(By.NAME, 'captcha')
-                        if captcha_input:
-                            captcha_input.send_keys(captchaTxt)
-
-                            verifyBtn = driver.find_element(By.CLASS_NAME, 'captcha-card-button')
-                            # verifyBtn = Func_FindElementByClassName(driver,'btn btn-primary captcha-card-button')
-                            if verifyBtn != None:
-                                verifyBtn.click()
-
-                                Func_FindElementByClassName(driver, 'card-title')
-
-                                html = driver.page_source.encode('utf-8')
-                                newSoup = BeautifulSoup(html, 'html.parser')
-
-                                if newSoup:
-                                    if newSoup.title.text != 'Human Verify':
-                                        # 成功してればCAPTCHAは抜けるので見つからない
-                                        ret = newSoup
-                                        fo.Func_DeleteFile(filePath)
+            ret = _solve_medusa_captcha(groupName, driver, soup, saveCAPTCHAImage)
 
         elif uf.strstr(groupName, 'LockBit3.0_2024_1') or \
             uf.strstr(groupName, 'LockBit3.0_2024_2') or \
             uf.strstr(groupName, 'LockBit3.0_2024_6') or \
             uf.strstr(groupName, 'LockBit3.0_2024_4'):
-            ret = None
-            for i in range(3):
-                # CAPTCHAじゃなく本物に接続できるケースがあるので
-                if uf.strstr('LockBit BLOG', driver.title):
-                    ret = soup
-                    break
+            ret = _solve_lockbit2024_captcha(groupName, driver, soup, saveCAPTCHAImage)
 
-                time.sleep(10)
-                # imgタグを探してsrc属性を取得
-                # img_tag = soup.find('img', {'class': 'captcha__image'})
-                # src_value = img_tag['src'] if img_tag else None
-                pngData = Func_FindElementByClassName(driver, 'captcha__image').screenshot_as_png
-
-                if pngData:
-                    filePath = saveCAPTCHAImage(groupName, pngData)
-
-                    promptText = 'この画像には英数字が６文字書いてあります。なんと書いてありますか？英数字として読み取れる文字だけ教えてください。\
-                                    回答に際は必ず「文字列:なんと書いてあるか」のように回答してください。\
-                                    これ以外の回答は不要です。'
-                    captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
-
-                    captcha_input = driver.find_element(By.NAME, 'captcha')
-                    if captcha_input:
-                        captcha_input.send_keys(captchaTxt)
-
-                        # verifyBtn = driver.find_element(By.CLASS_NAME, 'captcha-card-button')
-                        verifyBtns = Func_FindElemtsByCssSelector(driver, "button[type='submit']")
-                        if verifyBtns:
-                            verifyBtns[0].click()
-
-                            time.sleep(10)
-
-                            html = driver.page_source.encode('utf-8')
-                            newSoup = BeautifulSoup(html, 'html.parser')
-
-                            title = newSoup.title.string
-                            if title:
-                                if not uf.strstr('Humanity check', title):
-                                    ret = newSoup
-                                    fo.Func_DeleteFile(filePath)
-                                    break
-                                # errorText = 'The entered code does not match the image!'
-                                else:
-                                    refreshButton = Func_FindElementByClassName(driver, 'captcha__refresh')
-                                    if refreshButton:
-                                        refreshButton.click()
+        # elif uf.strcmp(groupName, 'Lockbit5.0'):
+        #     ret = _solve_lockbit5_captcha(groupName, driver, soup, saveCAPTCHAImage)
 
         elif uf.strstr(groupName, 'CHORT'):
-            ret = None
-            for i in range(3):
-                time.sleep(10)
-                # imgタグを探してsrc属性を取得
-                img_tag = soup.find('img')
-                # src_value = img_tag['src'] if img_tag else None
-                pngData = Func_FindElementByCSSSelector(driver, "img[alt='Chort']").screenshot_as_png
-
-                if pngData:
-                    filePath = saveCAPTCHAImage(groupName, pngData)
-
-                    promptText = 'この画像には４つの文字書いてあります。なんと書いてありますか？英数字として読み取れる文字だけ教えてください。\
-                                    回答に際は必ず「文字列:なんと書いてあるか」のように回答してください。\
-                                    これ以外の回答は不要です。'
-                    captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
-
-                    captcha_input = driver.find_element(By.CLASS_NAME, 'form-control')
-                    if captcha_input:
-                        captcha_input.send_keys(captchaTxt)
-                        verifyBtns = Func_FindElemtsByCssSelector(driver, "button.btn.btn-primary.btn-lg[name='Submit']")
-                        
-                        if verifyBtns:
-                            verifyBtns[0].click()
-
-                            time.sleep(10)
-
-                            html = driver.page_source.encode('utf-8')
-                            newSoup = BeautifulSoup(html, 'html.parser')
-
-                            title = newSoup.title.string
-                            if title:
-                                if uf.strstr('CHORT', title):
-                                    ret = newSoup
-                                    fo.Func_DeleteFile(filePath)
-                                    break
-                            
-                            driver.refresh()
+            ret = _solve_chort_captcha(groupName, driver, soup, saveCAPTCHAImage)
         elif uf.strstr(groupName, 'RALord'):
-            #  or uf.strstr(groupName, 'Nova'
-            ret = None
-            # 失敗したらリトライ
-            for i in range(3):
-                clearCaptha = False
-
-                time.sleep(60)
-                while not clearCaptha:
-                    # 2025/6時点の新しいCAPTHCAは多段式で、
-                    # クイズが三回、XORの計算が一回、簡単な計算が一回あるので、それぞれをクリアする必要がある
-                    # ただし、クイズに三回失敗するとWikiに飛ばされるのでリロードする
-                    promptText = '''画像には、Linuxに関連するクイズが記載されています。
-                    クイズには、回答を候補から選択する問題と、そうでないものがあります。
-                    ・選択問題ではないとき
-                    クイズの内容を読み取り、その回答のみ教えてください。コピーしてそのまま貼り付けることで回答したいです。
-                    ・選択問題の時
-                    質問の回答を三つから選択肢、上から何番目が正しい回答か教えてください。
-                    解答するときは、一番上を「0」として、２番目が「1」、３番目が「2」のような番号で回答を教えてください。数字以外の回答は不要です。
-
-                    注意事項)クイズの内容が読み取れない場合や、回答が不明な場合は「不明」とだけ解答してください。'''
-                    # promptText = 'この画像には計算式が書かれています。この計算の結果を回答してください。\
-                    #             回答の際は必ず計算式の結果となる数字のみを回答し、数字以外は一切回答に含めないでください。'
-                    # pngData = Func_FindElementByClassName(driver, "ctf-challenge").screenshot_as_png
-                    linuxChallenge = None
-                    cryptoChallenge = None
-                    securityVerification = None
-                    filePath = ''
-
-                    linuxChallenge = Func_FindElementById(driver, "linuxChallenge")
-                    if linuxChallenge and linuxChallenge.is_displayed():
-                            filePath = saveCAPTCHAImage(groupName, linuxChallenge.screenshot_as_png)
-                    else:
-                        linuxChallenge = None
-                        cryptoChallenge = Func_FindElementFlexibleByConditions(driver, className = 'xor-instruction')
-                        if not cryptoChallenge:
-                            cryptoChallenge = None
-                            securityVerification = Func_FindElementById(driver, "captchaQuestion")
-              
-                    if not linuxChallenge and not cryptoChallenge and not securityVerification:
-                        driver.refresh()
-                        break
-
-                    # このテキストなら三択問題
-                    if linuxChallenge:
-                        elem = Func_FindElementFlexibleByConditions(driver, className = 'attempts')
-                        if elem:
-                            # 試行回数の残りが0になったら間違えすぎなのでリロード
-                            if uf.strstr('Attempts left: 1', elem.text):
-                                break
-
-                        # captcha_input = driver.find_element(By.ID, 'captchaInput')
-                        captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
-                        fo.Func_DeleteFile(filePath)
-
-                        verifyBtns = Func_FindElementFlexibleByConditions(driver, className = 'option', attributes={"data-index": captchaTxt})
-                        if verifyBtns:
-                            verifyBtns.click()
-                    elif cryptoChallenge:
-                        captcha_input = Func_FindElementFlexibleByConditions(driver, className = 'crypto-input')
-                        if captcha_input:
-                            texts = cryptoChallenge.text.split('\n')
-                            hex1 = texts[1]
-                            hex2 = texts[2]
-                            def xor_hex_strings(hex1, hex2):
-                                # 16進文字列を整数に変換
-                                int1 = int(hex1, 16)
-                                int2 = int(hex2, 16)
-
-                                # XOR演算を実行
-                                result = int1 ^ int2
-
-                                # 結果を16進数文字列に変換（"0x" 付き）
-                                return hex(result)
-                            captchaTxt = xor_hex_strings(hex1, hex2)
-
-                            captcha_input.send_keys(captchaTxt)
-                            time.sleep(3)
-                            captcha_input.send_keys(Keys.ENTER)
-                            
-                    elif securityVerification:
-                        promptText = f'{securityVerification.text}の計算の結果を回答してください。\
-                                    回答の際は必ず計算式の結果となる値のみを回答し、数字以外は一切回答に含めないでください。'
-                        isSuccess, captchaTxt = ga.request_ChatGPT_latest(promptText = promptText)
-                        if captchaTxt:
-                            captcha_input = Func_FindElementById(driver, "captchaInput")
-                            if captcha_input:
-                                captcha_input.send_keys(captchaTxt)
-                        
-                                verifyBtns = Func_FindElementByClassName(driver, "captcha-submit")
-                                if verifyBtns:
-                                    verifyBtns.click()
-                                    time.sleep(10)
-                                    html = driver.page_source.encode('utf-8')
-                                    newSoup = BeautifulSoup(html, 'html.parser')
-                                    if uf.strstr( 'Nova GBlog', newSoup):
-                                        clearCaptha = True
-                                        ret = newSoup
-                                        break
-                                    else:
-                                        driver.refresh()
-                                        break
-                    else:
-                        break
-
-                if clearCaptha:
-                    break
+            ret = _solve_ralord_captcha(groupName, driver, soup, saveCAPTCHAImage)
 
 
         elif uf.strstr(groupName, 'ransomhub') or uf.strstr(groupName, 'DragonForce'):
-            ret = None
-            captchaTitle = 'RansomHub | Challenge'
-            if uf.strstr(groupName, 'DragonForce'):
-             captchaTitle = 'DragonForce | Challenge'
-
-            for i in range(3):
-                time.sleep(3)
-
-                try:
-                    # 入力用のボックス
-                    elements = driver.find_elements(By.CLASS_NAME, 'ch')  
-                    for element in elements:
-                        # 入力ボックスにカーソルを合わせてCAPTCHA画像を表示させる
-                        element.click()
-                        time.sleep(1)
-                        # 文字が一つずつ表示されるので、まず一つ目の文字をとる
-                        pngData = Func_FindElementByClassName(driver, "lense").screenshot_as_png
-
-                        if pngData:
-                            filePath = saveCAPTCHAImage(groupName, pngData)
-
-                            promptText = 'この画像には文字が様々な背景画像の上に、英数字が一文字だけ描かれています。\
-                                        一番目立つ文字を回答してください。回答は必ず読み取った一文字のみとし、余計な言葉は回答しないでください。'
-                            captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
-
-                            if captchaTxt:
-                                element.send_keys(captchaTxt)
-                            fo.Func_DeleteFile(filePath)
-
-                    # SUBMITボタン
-                    submitBtn = Func_FindElementByClassName(driver, "before")
-                    if submitBtn:
-                        submitBtn.click()
-                        time.sleep(1)
-    
-                        html = driver.page_source.encode('utf-8')
-                        newSoup = BeautifulSoup(html, 'html.parser')
-                        if newSoup.title.string != captchaTitle:
-                            ret = newSoup
-                            break
-                    else:
-                        break
-                except Exception as e:
-                    driver.refresh()
-                    Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
+            ret = _solve_ransomhub_dragonforce_captcha(groupName, driver, soup, saveCAPTCHAImage)
 
         elif uf.strstr(groupName, 'ThreeAM'):
-            ret = None
-            for i in range(3):
-                time.sleep(5)
-                # imgタグを探してsrc属性を取得
-                # pngData = Func_FindElementById(driver, "captchaQuestion").screenshot_as_png
-                pngData = Func_FindElementByTagName(driver, 'img', maxWait=20).screenshot_as_png
-
-                if pngData:
-                    filePath = saveCAPTCHAImage(groupName, pngData)
-
-                    promptText = '''この画像には、時計が描かれています。
-                                    白い針が短針で"時"表し、赤い針が長針で"分"を表します。そして"分"はかならず0起源で、5分刻みの時刻を表しています。
-                                    この画像が何時何分を示しているか、12時間表記で回答してください。
-                                    この回答はシンプルに数字をカンマ区切りで回答を行い、余計な文字は一切回答しないでください。
-                                    例：10,5'''
-                    captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
-
-                    def parse_time_string(time_str):
-                        """
-                        "H,M" 形式の文字列を解析し、(hour, minute) を整数で返す。
-                        フォーマットが不正な場合や範囲外の場合は (-1, -1) を返す。
-                        """
-                        try:
-                            # 正規表現で "数字,数字" 形式かを検証
-                            if not re.fullmatch(r'\d{1,2},\d{1,2}', time_str):
-                                raise ValueError("形式エラー")
-
-                            hour_str, minute_str = time_str.split(',')
-                            hour = int(hour_str)
-                            minute = int(minute_str)
-
-                            # 範囲チェック（12時間表記）
-                            if not (1 <= hour <= 12):
-                                raise ValueError("時の範囲エラー")
-                            if not (0 <= minute <= 59):
-                                raise ValueError("分の範囲エラー")
-
-                            return hour, minute
-
-                        except ValueError:
-                            return -1, -1
-                        
-                    hour, minute = parse_time_string(captchaTxt)
-
-                    # captcha_input = driver.find_element(By.ID, 'captchaInput')
-                    captcha_input_Hour = Func_FindElementById(driver, "hour")
-                    captcha_input_minute = Func_FindElementById(driver, "minute")
-
-                    if (hour >= 0) and (captcha_input_Hour and captcha_input_minute):
-                        captcha_input_Hour.send_keys(str(hour))
-                        captcha_input_minute.send_keys(str(minute))
-                        # verifyBtns = Func_FindElementByClassName(driver, "btn btn-primary")
-                        verifyBtns = Func_FindElementByTagName(driver, 'button', maxWait=20)
-
-                        if verifyBtns:
-                            verifyBtns.click()
-
-                            time.sleep(3)
-
-                            html = driver.page_source.encode('utf-8')
-                            newSoup = BeautifulSoup(html, 'html.parser')
-                            elem = newSoup.find('h2')
-                            if elem:
-                                text = elem.get_text().strip()
-                                if text != 'What time does the clock show?':
-                                    ret = newSoup
-                                    break
-                    fo.Func_DeleteFile(filePath)
-                            
-                driver.refresh()
+            ret = _solve_threeam_captcha(groupName, driver, soup, saveCAPTCHAImage)
         elif uf.strstr(groupName, 'Kyber'):
-            ret = None
-            for i in range(3):
-                time.sleep(5)
-                # imgタグを探してsrc属性を取得
-                # pngData = Func_FindElementById(driver, "captchaQuestion").screenshot_as_png
-                pngData = Func_FindElementByTagName(driver, 'img', maxWait=20).screenshot_as_png
-
-                if pngData:
-                    filePath = saveCAPTCHAImage(groupName, pngData)
-
-                    promptText = '''この画像描かれている英数字を教えてください。英文字は大文字です。描かれている文字のみ回答し、その他の言葉を一切回答に含めないでください。'''
-                    captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
-
-                    captcha_input = driver.find_element(By.CLASS_NAME, 'captcha-input')
-                    if captcha_input:
-                        captcha_input.send_keys(captchaTxt)
-                        verifyBtn = Func_FindElemtsByClassName(driver, "submit-btn")
-                        
-                        if verifyBtn:
-                            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", verifyBtn)
-
-                            # クリック可能になるまで“待つ”（存在=presenceではなく）
-                            from selenium.common.exceptions import ElementClickInterceptedException, ElementNotInteractableException, TimeoutException
-                            try:
-                                WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, verifyBtn.get_attribute("id") or "submit")))
-                                # 通常クリック
-                                verifyBtn.click()
-                            except (ElementClickInterceptedException, ElementNotInteractableException, TimeoutException):
-                                # 最後の砦：JSクリック
-                                driver.execute_script("arguments[0].click();", verifyBtn)
-                            time.sleep(30)
-
-                            html = driver.page_source.encode('utf-8')
-                            newSoup = BeautifulSoup(html, 'html.parser')
-
-                            title = newSoup.title.string
-                            if title:
-                                if uf.strstr('Blog', title):
-                                    ret = newSoup
-                                    fo.Func_DeleteFile(filePath)
-                                    break
-                            
-                            driver.refresh()
+            ret = _solve_kyber_captcha(groupName, driver, soup, saveCAPTCHAImage)
     except Exception as e:
         Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
 
     # 応急処置：CAPTHCAがなくなったりした場合、
     if not ret:
         ret = soup
+    return ret
+
+
+def _solve_medusa_captcha(groupName, driver, soup, saveCAPTCHAImage):
+    ret = None
+    # imgタグを探してsrc属性を取得
+    img_tag = soup.find('img', {'id': 'captcha-image'})
+    src_value = img_tag['src'] if img_tag else None
+
+    if src_value:
+        time.sleep(10)
+        pngData = Func_FindElementByClassName(driver, 'captcha-image-wrapper').screenshot_as_png
+
+        if pngData:
+            # 中のテキストが表示されるまで時間がかかる
+            filePath = saveCAPTCHAImage(groupName, pngData)
+
+            captchaTxt = ga.request_openai_vision_latest(image_path = filePath)
+
+            # MedusaはCAPTCHAのテキストに数字はいらないのでチェック
+            captchaTxt = captchaTxt.lower()
+            if bool(re.search(r'\d', captchaTxt)) == False:
+                captcha_input = driver.find_element(By.NAME, 'captcha')
+                if captcha_input:
+                    captcha_input.send_keys(captchaTxt)
+
+                    verifyBtn = driver.find_element(By.CLASS_NAME, 'captcha-card-button')
+                    # verifyBtn = Func_FindElementByClassName(driver,'btn btn-primary captcha-card-button')
+                    if verifyBtn != None:
+                        verifyBtn.click()
+
+                        Func_FindElementByClassName(driver, 'card-title')
+
+                        html = driver.page_source.encode('utf-8')
+                        newSoup = BeautifulSoup(html, 'html.parser')
+
+                        if newSoup:
+                            if newSoup.title.text != 'Human Verify':
+                                # 成功してればCAPTCHAは抜けるので見つからない
+                                ret = newSoup
+                                fo.Func_DeleteFile(filePath)
+    return ret
+
+
+def _save_base64_background_image(element, groupName, saveCAPTCHAImage):
+    filePath = ''
+    try:
+        styleValue = element.get_attribute('style') or ''
+        match = re.search(r'data:image/[^;]+;base64,([^"\)]+)', styleValue)
+        if not match:
+            return ''
+
+        rawData = base64.b64decode(match.group(1))
+        np_arr = np.frombuffer(rawData, np.uint8)
+        img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        if img is None:
+            return ''
+
+        success, buffer = cv2.imencode('.png', img)
+        if not success:
+            return ''
+
+        filePath = saveCAPTCHAImage(groupName, buffer.tobytes())
+    except Exception as e:
+        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'base64 decode error:{str(e.args)}')
+
+    return filePath
+
+
+def _calc_css_calc_value(expr):
+    try:
+        work = expr.strip()
+        if work.startswith('calc'):
+            work = work[4:].strip()
+        if work.startswith('(') and work.endswith(')'):
+            work = work[1:-1]
+        work = work.replace('px', '')
+        work = work.replace('deg', '')
+        work = work.replace('-', '+-')
+        parts = [item.strip() for item in work.split('+') if item.strip() != '']
+        total = 0.0
+        for item in parts:
+            total += float(item)
+        return total
+    except Exception:
+        return None
+
+
+def _parse_background_position_values(valueStr):
+    try:
+        if not valueStr:
+            return None
+
+        calcList = re.findall(r'calc\([^)]*\)', valueStr)
+        values = []
+        if len(calcList) >= 2:
+            values = calcList[:2]
+        else:
+            temp = valueStr.split()
+            if len(temp) >= 2:
+                values = temp[:2]
+
+        if len(values) < 2:
+            return None
+
+        def _to_float(item):
+            item = item.strip()
+            if item.startswith('calc'):
+                return _calc_css_calc_value(item)
+            if item.endswith('px'):
+                item = item[:-2]
+            return float(item)
+
+        x_val = _to_float(values[0])
+        y_val = _to_float(values[1])
+        if x_val is None or y_val is None:
+            return None
+
+        return (x_val, y_val)
+    except Exception:
+        return None
+
+
+def _extract_background_position(styleValue):
+    try:
+        if not styleValue:
+            return None
+
+        if 'background-position' not in styleValue:
+            return _parse_background_position_values(styleValue)
+
+        match = re.search(r'background-position\s*:\s*([^;]+)', styleValue)
+        if not match:
+            return None
+
+        rawValue = match.group(1).strip()
+        return _parse_background_position_values(rawValue)
+    except Exception:
+        return None
+
+
+def _get_css_rule_values(driver, selector, properties):
+    try:
+        if not selector or not properties:
+            return {}
+
+        script = """
+        const selector = arguments[0];
+        const props = arguments[1];
+        const result = {};
+        for (const sheet of document.styleSheets) {
+            let rules;
+            try {
+                rules = sheet.cssRules;
+            } catch (err) {
+                continue;
+            }
+            if (!rules) {
+                continue;
+            }
+            for (const rule of rules) {
+                if (rule.selectorText === selector) {
+                    for (const prop of props) {
+                        result[prop] = rule.style.getPropertyValue(prop) || '';
+                    }
+                    return result;
+                }
+            }
+        }
+        return result;
+        """
+        return driver.execute_script(script, selector, properties)
+    except Exception:
+        return {}
+
+
+def _extract_rotation_angle(styleValue):
+    try:
+        if not styleValue:
+            return None
+
+        matrixMatch = re.search(r'matrix\(([^,]+),([^,]+),([^,]+),([^,]+),', styleValue)
+        if matrixMatch:
+            a = float(matrixMatch.group(1))
+            b = float(matrixMatch.group(2))
+            angle = math.degrees(math.atan2(b, a))
+            return angle
+
+        key = 'rotate('
+        start = styleValue.find(key)
+        if start == -1:
+            return None
+
+        idx = start + len(key)
+        depth = 1
+        end = idx
+        while end < len(styleValue) and depth > 0:
+            if styleValue[end] == '(':
+                depth += 1
+            elif styleValue[end] == ')':
+                depth -= 1
+            end += 1
+
+        if depth != 0:
+            return None
+
+        content = styleValue[idx:end-1]
+        return _calc_css_calc_value(content)
+    except Exception:
+        return None
+
+
+def _solve_lockbit2024_captcha(groupName, driver, soup, saveCAPTCHAImage):
+    ret = None
+    for i in range(3):
+        # CAPTCHAじゃなく本物に接続できるケースがあるので
+        if uf.strstr('LockBit BLOG', driver.title):
+            ret = soup
+            break
+
+        time.sleep(10)
+        # imgタグを探してsrc属性を取得
+        # img_tag = soup.find('img', {'class': 'captcha__image'})
+        # src_value = img_tag['src'] if img_tag else None
+        pngData = Func_FindElementByClassName(driver, 'captcha__image').screenshot_as_png
+
+        if pngData:
+            filePath = saveCAPTCHAImage(groupName, pngData)
+
+            promptText = 'この画像には英数字が６文字書いてあります。なんと書いてありますか？英数字として読み取れる文字だけ教えてください。\
+                            回答に際は必ず「文字列:なんと書いてあるか」のように回答してください。\
+                            これ以外の回答は不要です。'
+            captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
+
+            captcha_input = driver.find_element(By.NAME, 'captcha')
+            if captcha_input:
+                captcha_input.send_keys(captchaTxt)
+
+                # verifyBtn = driver.find_element(By.CLASS_NAME, 'captcha-card-button')
+                verifyBtns = Func_FindElemtsByCssSelector(driver, "button[type='submit']")
+                if verifyBtns:
+                    verifyBtns[0].click()
+
+                    time.sleep(10)
+
+                    html = driver.page_source.encode('utf-8')
+                    newSoup = BeautifulSoup(html, 'html.parser')
+
+                    title = newSoup.title.string
+                    if title:
+                        if not uf.strstr('Humanity check', title):
+                            ret = newSoup
+                            fo.Func_DeleteFile(filePath)
+                            break
+                        # errorText = 'The entered code does not match the image!'
+                        else:
+                            refreshButton = Func_FindElementByClassName(driver, 'captcha__refresh')
+                            if refreshButton:
+                                refreshButton.click()
+    return ret
+
+
+def _solve_lockbit5_captcha(groupName, driver, soup, saveCAPTCHAImage):
+    ret = None
+    target_title = 'LockBit 5.0 Blog'
+    # promptText = 'この画像には英数字が1文字だけ描かれています。最も目立つその1文字のみを回答してください。余計な言葉や記号は書かないでください。'
+
+    for i in range(3):
+        try:
+            inputs = driver.find_elements(By.CLASS_NAME, 'ch')
+            if len(inputs) < 6:
+                continue
+            
+            imageElem = Func_FindElementByClassName(driver, 'image')
+            if not imageElem:
+                continue
+
+            filePath = _save_base64_background_image(imageElem, groupName, saveCAPTCHAImage)
+            # filePath = saveCAPTCHAImage(groupName, imageElem.screenshot_as_png)
+
+            if not filePath:
+                continue
+            
+            solved = True
+            for input_box in inputs[:6]:
+                try:
+                    driver.execute_script("arguments[0].focus();", input_box)
+                    input_box.click()
+                except Exception:
+                    driver.execute_script("arguments[0].click();", input_box)
+
+                # time.sleep(1)
+                styleValue = imageElem.get_attribute('style') or ''
+                positionValue = driver.execute_script(
+                    "return window.getComputedStyle(arguments[0]).getPropertyValue('background-position');",
+                    imageElem
+                )
+                transformValue = driver.execute_script(
+                    "const style = window.getComputedStyle(arguments[0]);"
+                    "return style.getPropertyValue('transform') || style.getPropertyValue('-webkit-transform') || '';",
+                    imageElem
+                )
+
+                # position = _extract_background_position(positionValue)
+                # rotation = _extract_rotation_angle(transformValue)
+
+                # if not position:
+                #     position = _extract_background_position(styleValue)
+
+                # if rotation is None and styleValue:
+                #     rotation = _extract_rotation_angle(styleValue)
+
+                # if position:
+                #     Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'Lockbit5 background-position: X={position[0]:.2f}px Y={position[1]:.2f}px')
+                # if rotation is not None:
+                #     direction = 'right' if rotation > 0 else ('left' if rotation < 0 else 'none')
+                #     Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'Lockbit5 rotation: {rotation:.2f}deg ({direction})')
+
+                promptText = [
+                    f'この画像には英数字書かれています。この中から',
+                    # f'X座標{str(position[0])}/Y座標{str(position[1])}の配置で',
+                    f'座標{str(positionValue)}の配置で',
+                    f'{transformValue}という拡大、回転ルールに基づいて配置されている',
+                    f'1文字を読み取り回答してください。余計な言葉や記号は書かないでください。'
+                ]
+
+                captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
+                cleaned = ''.join(re.findall(r'[A-Za-z0-9]', captchaTxt))
+
+                if not cleaned:
+                    solved = False
+                    break
+
+                input_box.clear()
+                input_box.send_keys(cleaned[0])
+
+            fo.Func_DeleteFile(filePath)
+
+            if solved is False:
+                driver.refresh()
+                continue
+
+            submitBtn = Func_FindElementByClassName(driver, 'before')
+            if submitBtn:
+                submitBtn.click()
+
+                start = time.time()
+                while time.time() - start <= 180:
+                    if uf.strstr(target_title, driver.title):
+                        html = driver.page_source.encode('utf-8')
+                        ret = BeautifulSoup(html, 'html.parser')
+                        return ret
+                    time.sleep(3)
+
+            driver.refresh()
+        except Exception as e:
+            Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
+            driver.refresh()
+
+    return ret
+
+
+def _solve_chort_captcha(groupName, driver, soup, saveCAPTCHAImage):
+    ret = None
+    for i in range(3):
+        time.sleep(10)
+        # imgタグを探してsrc属性を取得
+        img_tag = soup.find('img')
+        # src_value = img_tag['src'] if img_tag else None
+        pngData = Func_FindElementByCSSSelector(driver, "img[alt='Chort']").screenshot_as_png
+
+        if pngData:
+            filePath = saveCAPTCHAImage(groupName, pngData)
+
+            promptText = 'この画像には４つの文字書いてあります。なんと書いてありますか？英数字として読み取れる文字だけ教えてください。\
+                            回答に際は必ず「文字列:なんと書いてあるか」のように回答してください。\
+                            これ以外の回答は不要です。'
+            captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
+
+            captcha_input = driver.find_element(By.CLASS_NAME, 'form-control')
+            if captcha_input:
+                captcha_input.send_keys(captchaTxt)
+                verifyBtns = Func_FindElemtsByCssSelector(driver, "button.btn.btn-primary.btn-lg[name='Submit']")
+                
+                if verifyBtns:
+                    verifyBtns[0].click()
+
+                    time.sleep(10)
+
+                    html = driver.page_source.encode('utf-8')
+                    newSoup = BeautifulSoup(html, 'html.parser')
+
+                    title = newSoup.title.string
+                    if title:
+                        if uf.strstr('CHORT', title):
+                            ret = newSoup
+                            fo.Func_DeleteFile(filePath)
+                            break
+                    
+                    driver.refresh()
+    return ret
+
+
+def _solve_ralord_captcha(groupName, driver, soup, saveCAPTCHAImage):
+    #  or uf.strstr(groupName, 'Nova'
+    ret = None
+    # 失敗したらリトライ
+    for i in range(3):
+        clearCaptha = False
+
+        time.sleep(60)
+        while not clearCaptha:
+            # 2025/6時点の新しいCAPTHCAは多段式で、
+            # クイズが三回、XORの計算が一回、簡単な計算が一回あるので、それぞれをクリアする必要がある
+            # ただし、クイズに三回失敗するとWikiに飛ばされるのでリロードする
+            promptText = '''画像には、Linuxに関連するクイズが記載されています。
+            クイズには、回答を候補から選択する問題と、そうでないものがあります。
+            ・選択問題ではないとき
+            クイズの内容を読み取り、その回答のみ教えてください。コピーしてそのまま貼り付けることで回答したいです。
+            ・選択問題の時
+            質問の回答を三つから選択肢、上から何番目が正しい回答か教えてください。
+            解答するときは、一番上を「0」として、２番目が「1」、３番目が「2」のような番号で回答を教えてください。数字以外の回答は不要です。
+
+            注意事項)クイズの内容が読み取れない場合や、回答が不明な場合は「不明」とだけ解答してください。'''
+            # promptText = 'この画像には計算式が書かれています。この計算の結果を回答してください。\
+            #             回答の際は必ず計算式の結果となる数字のみを回答し、数字以外は一切回答に含めないでください。'
+            # pngData = Func_FindElementByClassName(driver, "ctf-challenge").screenshot_as_png
+            linuxChallenge = None
+            cryptoChallenge = None
+            securityVerification = None
+            filePath = ''
+
+            linuxChallenge = Func_FindElementById(driver, "linuxChallenge")
+            if linuxChallenge and linuxChallenge.is_displayed():
+                    filePath = saveCAPTCHAImage(groupName, linuxChallenge.screenshot_as_png)
+            else:
+                linuxChallenge = None
+                cryptoChallenge = Func_FindElementFlexibleByConditions(driver, className = 'xor-instruction')
+                if not cryptoChallenge:
+                    cryptoChallenge = None
+                    securityVerification = Func_FindElementById(driver, "captchaQuestion")
+      
+            if not linuxChallenge and not cryptoChallenge and not securityVerification:
+                driver.refresh()
+                break
+
+            # このテキストなら三択問題
+            if linuxChallenge:
+                elem = Func_FindElementFlexibleByConditions(driver, className = 'attempts')
+                if elem:
+                    # 試行回数の残りが0になったら間違えすぎなのでリロード
+                    if uf.strstr('Attempts left: 1', elem.text):
+                        break
+
+                # captcha_input = driver.find_element(By.ID, 'captchaInput')
+                captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
+                fo.Func_DeleteFile(filePath)
+
+                verifyBtns = Func_FindElementFlexibleByConditions(driver, className = 'option', attributes={"data-index": captchaTxt})
+                if verifyBtns:
+                    verifyBtns.click()
+            elif cryptoChallenge:
+                captcha_input = Func_FindElementFlexibleByConditions(driver, className = 'crypto-input')
+                if captcha_input:
+                    texts = cryptoChallenge.text.split('\n')
+                    hex1 = texts[1]
+                    hex2 = texts[2]
+                    def xor_hex_strings(hex1, hex2):
+                        # 16進文字列を整数に変換
+                        int1 = int(hex1, 16)
+                        int2 = int(hex2, 16)
+
+                        # XOR演算を実行
+                        result = int1 ^ int2
+
+                        # 結果を16進数文字列に変換（"0x" 付き）
+                        return hex(result)
+                    captchaTxt = xor_hex_strings(hex1, hex2)
+
+                    captcha_input.send_keys(captchaTxt)
+                    time.sleep(3)
+                    captcha_input.send_keys(Keys.ENTER)
+                    
+            elif securityVerification:
+                promptText = f'{securityVerification.text}の計算の結果を回答してください。\
+                            回答の際は必ず計算式の結果となる値のみを回答し、数字以外は一切回答に含めないでください。'
+                isSuccess, captchaTxt = ga.request_ChatGPT_latest(promptText = promptText)
+                if captchaTxt:
+                    captcha_input = Func_FindElementById(driver, "captchaInput")
+                    if captcha_input:
+                        captcha_input.send_keys(captchaTxt)
+                
+                        verifyBtns = Func_FindElementByClassName(driver, "captcha-submit")
+                        if verifyBtns:
+                            verifyBtns.click()
+                            time.sleep(10)
+                            html = driver.page_source.encode('utf-8')
+                            newSoup = BeautifulSoup(html, 'html.parser')
+                            if uf.strstr( 'Nova GBlog', newSoup):
+                                clearCaptha = True
+                                ret = newSoup
+                                break
+                            else:
+                                driver.refresh()
+                                break
+            else:
+                break
+
+        if clearCaptha:
+            break
+    return ret
+
+
+def _solve_ransomhub_dragonforce_captcha(groupName, driver, soup, saveCAPTCHAImage):
+    ret = None
+    captchaTitle = 'RansomHub | Challenge'
+    if uf.strstr(groupName, 'DragonForce'):
+     captchaTitle = 'DragonForce | Challenge'
+
+    for i in range(3):
+        time.sleep(3)
+
+        try:
+            # 入力用のボックス
+            elements = driver.find_elements(By.CLASS_NAME, 'ch')  
+            for element in elements:
+                # 入力ボックスにカーソルを合わせてCAPTCHA画像を表示させる
+                element.click()
+                time.sleep(1)
+                # 文字が一つずつ表示されるので、まず一つ目の文字をとる
+                pngData = Func_FindElementByClassName(driver, "lense").screenshot_as_png
+
+                if pngData:
+                    filePath = saveCAPTCHAImage(groupName, pngData)
+
+                    promptText = 'この画像には文字が様々な背景画像の上に、英数字が一文字だけ描かれています。\
+                                一番目立つ文字を回答してください。回答は必ず読み取った一文字のみとし、余計な言葉は回答しないでください。'
+                    captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
+
+                    if captchaTxt:
+                        element.send_keys(captchaTxt)
+                    fo.Func_DeleteFile(filePath)
+
+            # SUBMITボタン
+            submitBtn = Func_FindElementByClassName(driver, "before")
+            if submitBtn:
+                submitBtn.click()
+                time.sleep(1)
+
+                html = driver.page_source.encode('utf-8')
+                newSoup = BeautifulSoup(html, 'html.parser')
+                if newSoup.title.string != captchaTitle:
+                    ret = newSoup
+                    break
+            else:
+                break
+        except Exception as e:
+            driver.refresh()
+            Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
+    return ret
+
+
+def _solve_threeam_captcha(groupName, driver, soup, saveCAPTCHAImage):
+    ret = None
+    for i in range(3):
+        time.sleep(5)
+        # imgタグを探してsrc属性を取得
+        # pngData = Func_FindElementById(driver, "captchaQuestion").screenshot_as_png
+        pngData = Func_FindElementByTagName(driver, 'img', maxWait=20).screenshot_as_png
+
+        if pngData:
+            filePath = saveCAPTCHAImage(groupName, pngData)
+
+            promptText = '''この画像には、時計が描かれています。
+                            白い針が短針で"時"表し、赤い針が長針で"分"を表します。そして"分"はかならず0起源で、5分刻みの時刻を表しています。
+                            この画像が何時何分を示しているか、12時間表記で回答してください。
+                            この回答はシンプルに数字をカンマ区切りで回答を行い、余計な文字は一切回答しないでください。
+                            例：10,5'''
+            captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
+
+            def parse_time_string(time_str):
+                """
+                "H,M" 形式の文字列を解析し、(hour, minute) を整数で返す。
+                フォーマットが不正な場合や範囲外の場合は (-1, -1) を返す。
+                """
+                try:
+                    # 正規表現で "数字,数字" 形式かを検証
+                    if not re.fullmatch(r'\d{1,2},\d{1,2}', time_str):
+                        raise ValueError("形式エラー")
+
+                    hour_str, minute_str = time_str.split(',')
+                    hour = int(hour_str)
+                    minute = int(minute_str)
+
+                    # 範囲チェック（12時間表記）
+                    if not (1 <= hour <= 12):
+                        raise ValueError("時の範囲エラー")
+                    if not (0 <= minute <= 59):
+                        raise ValueError("分の範囲エラー")
+
+                    return hour, minute
+
+                except ValueError:
+                    return -1, -1
+                
+            hour, minute = parse_time_string(captchaTxt)
+
+            # captcha_input = driver.find_element(By.ID, 'captchaInput')
+            captcha_input_Hour = Func_FindElementById(driver, "hour")
+            captcha_input_minute = Func_FindElementById(driver, "minute")
+
+            if (hour >= 0) and (captcha_input_Hour and captcha_input_minute):
+                captcha_input_Hour.send_keys(str(hour))
+                captcha_input_minute.send_keys(str(minute))
+                # verifyBtns = Func_FindElementByClassName(driver, "btn btn-primary")
+                verifyBtns = Func_FindElementByTagName(driver, 'button', maxWait=20)
+
+                if verifyBtns:
+                    verifyBtns.click()
+
+                    time.sleep(3)
+
+                    html = driver.page_source.encode('utf-8')
+                    newSoup = BeautifulSoup(html, 'html.parser')
+                    elem = newSoup.find('h2')
+                    if elem:
+                        text = elem.get_text().strip()
+                        if text != 'What time does the clock show?':
+                            ret = newSoup
+                            break
+            fo.Func_DeleteFile(filePath)
+                    
+        driver.refresh()
+    return ret
+
+
+def _solve_kyber_captcha(groupName, driver, soup, saveCAPTCHAImage):
+    ret = None
+    for i in range(3):
+        time.sleep(5)
+        # imgタグを探してsrc属性を取得
+        # pngData = Func_FindElementById(driver, "captchaQuestion").screenshot_as_png
+        pngData = Func_FindElementByTagName(driver, 'img', maxWait=20).screenshot_as_png
+
+        if pngData:
+            filePath = saveCAPTCHAImage(groupName, pngData)
+
+            promptText = '''この画像描かれている英数字を教えてください。英文字は大文字です。描かれている文字のみ回答し、その他の言葉を一切回答に含めないでください。'''
+            captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
+
+            captcha_input = driver.find_element(By.CLASS_NAME, 'captcha-input')
+            if captcha_input:
+                captcha_input.send_keys(captchaTxt)
+                verifyBtn = Func_FindElemtsByClassName(driver, "submit-btn")
+                
+                if verifyBtn:
+                    driver.execute_script("arguments[0].scrollIntoView({block:'center'});", verifyBtn)
+
+                    # クリック可能になるまで“待つ”（存在=presenceではなく）
+                    from selenium.common.exceptions import ElementClickInterceptedException, ElementNotInteractableException, TimeoutException
+                    try:
+                        WebDriverWait(driver, 10).until(EC.element_to_be_clickable((By.ID, verifyBtn.get_attribute("id") or "submit")))
+                        # 通常クリック
+                        verifyBtn.click()
+                    except (ElementClickInterceptedException, ElementNotInteractableException, TimeoutException):
+                        # 最後の砦：JSクリック
+                        driver.execute_script("arguments[0].click();", verifyBtn)
+                    time.sleep(30)
+
+                    html = driver.page_source.encode('utf-8')
+                    newSoup = BeautifulSoup(html, 'html.parser')
+
+                    title = newSoup.title.string
+                    if title:
+                        if uf.strstr('Blog', title):
+                            ret = newSoup
+                            fo.Func_DeleteFile(filePath)
+                            break
+                    
+                    driver.refresh()
     return ret
 
 #   戻り値：取得したテキストを返す → 戻りとしては使わない。成否判定くらい
@@ -1802,7 +2114,8 @@ def TrimImage_takasa(groupName,img_path,kaishi_x,kaishi_y, width_minasu,takasa):
 def TrimImage_takasa_DetailPage(groupName, path):
 
     if uf.strstr('LockBit', groupName):
-        TrimImage_takasa(groupName,path,0, 0, 0,1100)
+        # TrimImage_takasa(groupName,path,0, 0, 0,1100)
+        pass
     elif uf.strcmp('MedusaBlog', groupName):
         TrimImage_takasa(groupName,path,0, 0, 0,2000)
 
@@ -1896,10 +2209,10 @@ def Triming_Screenshot(RansomName,FILENAME):
             img_wariai = 1
         TrimImage_takasa(RansomName,FILENAME,0,0,0,1500) #高さ指定
 
-    elif uf.strstr("LockBit", RansomName) == True:
-        if sb.headless_options == 1:
-            img_wariai = 1
-        TrimImage_takasa(RansomName,FILENAME,0,0,0,1030) #高さ指定
+    # elif uf.strstr("LockBit", RansomName) == True:
+    #     if sb.headless_options == 1:
+    #         img_wariai = 1
+    #     TrimImage_takasa(RansomName,FILENAME,0,0,0,1030) #高さ指定
 
     elif uf.strcmp("Vice_Society", RansomName) == True:
         if sb.headless_options == 1:
@@ -2030,15 +2343,14 @@ def wrap_Func_scraping(driver, soup, groupName, url, forDetail = False, value=No
     ret = {}
 
     IsIndivisialScrapingTarget = True
-    if uf.strstr('LockBit', groupName):
+    if uf.strstr('Lockbit5.0', groupName):
+        ret = Func_scraping_Lockbit(driver, soup, groupName, url, forDetail, value)
+    elif uf.strstr('LockBit', groupName):
         # ファイルサーバーなので別関数
         if uf.strcmp(groupName, 'LockBit3.0_2024_5'):
             ret = Func_scraping_Lockbit_FS(driver, soup, groupName, url, forDetail, value)
-        elif uf.strcmp(groupName, 'LockBit3.0_2024_3') == False:
-            ret = Func_scraping_Lockbit(driver, soup, groupName, url, forDetail, value)
         else:
             IsIndivisialScrapingTarget = False
-
     elif uf.strcmp('Hive', groupName):
         ret = Func_scraping_HIVE(driver, soup, groupName, url, forDetail, value)
 
@@ -5479,9 +5791,28 @@ def Func_scraping_AKIRA(driver, soup, groupName, url, forDetail, value):
             "Priority": "u=0"
         }
 
-        response = sb.getHtmlResponseByRequest(databaseUrl, headers=headers, verify=False)
+        groupLogger.log(groupName, 'Func_scraping_AKIRA_request', 'starting request to AKIRA API', {
+            'url': databaseUrl,
+            'headers': {
+                'User-Agent': headers.get('User-Agent'),
+                'Accept': headers.get('Accept')
+            }
+        })
+        response = sb.getHtmlResponseByRequest(databaseUrl, headers=headers, verify=False, group_name=groupName)
         
+        if response is None:
+            groupLogger.log(groupName, 'Func_scraping_AKIRA_response', 'no response returned', {'url': databaseUrl})
+            return retDict
+
+        groupLogger.log(groupName, 'Func_scraping_AKIRA_response', 'received response', {
+            'status_code': getattr(response, 'status_code', None),
+            'reason': getattr(response, 'reason', None),
+            'url': getattr(response, 'url', databaseUrl)
+        })
+
         raw_bytes = response.content
+        groupLogger.log(groupName, 'Func_scraping_AKIRA_raw', 'raw bytes retrieved', {'length': len(raw_bytes)})
+
         if len(raw_bytes) > 0:
             text = raw_bytes.decode("utf-8")
             dataArray = json.loads(text).get('objects', [])
@@ -5496,6 +5827,8 @@ def Func_scraping_AKIRA(driver, soup, groupName, url, forDetail, value):
 
                     retDict[victimName] = {'updateDate':updateDate, 'url': urlStr, 'summary':summary, 'detectedDate':uf.getDateTime('%Y/%m/%d %H:%M'), 'detailUrl':detailUrl}
 
+        else:
+            groupLogger.log(groupName, 'Func_scraping_AKIRA_raw', 'empty response body', {})
         # 戻す
         # wrap_getURL(driver, url, groupName)
     except Exception as e:

@@ -10,6 +10,7 @@ from webdriver_manager.firefox import GeckoDriverManager
 from Config import Config as cf
 from OnionScraperLib import Log
 from OnionScraperLib import FileOperate as fo
+from OnionScraperLib import GroupLogger as groupLogger
 
 
 #スクリーンショット時のヘッドレスの有効無効（0：ブラウザが表示され無効にすると見えている範囲だけ撮影される）
@@ -729,7 +730,7 @@ def cleanup_torrc(torConfFile):
 # torProc, driver, service, temp_dir, torConfFile = setup_driver('DataCarry')
 # clear_driver(torProc, driver, service, temp_dir, torConfFile)
 
-def getHtmlResponseByRequest(url, headers = None, verify=False):
+def getHtmlResponseByRequest(url, headers = None, verify=False, group_name=None):
     try:
         response = None
 
@@ -737,6 +738,15 @@ def getHtmlResponseByRequest(url, headers = None, verify=False):
         reset_tor_port()
         torProc, torConfFile = start_tor(socks_port)  # Torを起動
         session = getSession(socks_port)
+        logger_name = group_name or 'unknown'
+        groupLogger.log(logger_name, 'getHtmlResponseByRequest', 'request_start', {
+            'port': socks_port,
+            'url': url,
+            'headers': {
+                'User-Agent': headers.get('User-Agent') if headers else None,
+                'Accept': headers.get('Accept') if headers else None
+            }
+        })
         response = session.get(url, headers=headers, verify=False, timeout=30)
 
         if torProc:
@@ -744,8 +754,24 @@ def getHtmlResponseByRequest(url, headers = None, verify=False):
             torProc.wait()  # プロセスが終了するのを待つ
 
         cleanup_torrc(torConfFile)
+        logger_name = group_name or 'unknown'
+        if response is None:
+            groupLogger.log(logger_name, 'getHtmlResponseByRequest', 'no_response', {'port': socks_port, 'url': url})
+        else:
+            groupLogger.log(logger_name, 'getHtmlResponseByRequest', 'request_complete', {
+                'port': socks_port,
+                'status_code': getattr(response, 'status_code', None),
+                'reason': getattr(response, 'reason', None),
+                'url': url
+            })
     except Exception as e:
         Log.Logging("System","{}: Exception:{}".format(Log.Trace.execution_location(), str(e.args)))
+
+        logger_name = group_name or 'unknown'
+        groupLogger.log(logger_name, 'getHtmlResponseByRequest', 'exception', {
+            'error': str(e),
+            'args': e.args
+        })
 
     return response
 
