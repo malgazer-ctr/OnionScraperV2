@@ -266,7 +266,7 @@ SNEDTO_DIFF = [
     'ke.nakayama@mbsd.jp',
     
     # NHK
-    'fukuda.y-jy@nhk.or.jp',
+    # 'fukuda.y-jy@nhk.or.jp',
     'nishimura.s-je@nhk.or.jp',
     'kinugawa.c-du@nhk.or.jp',
     # 'kurosesjk29@gmail.com', 2025/10/14 担当が変わったので除外
