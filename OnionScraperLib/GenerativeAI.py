@@ -15,7 +15,9 @@ if not _OPENAI_API_KEY:
 client = _OpenAI(api_key=_OPENAI_API_KEY)
 
 # ===== モデル設定 =====
-DEFAULT_MODEL = "gpt-5"              # 通常回答
+# DEFAULT_MODEL = "gpt-5"              # 通常回答
+DEFAULT_MODEL = "gpt-5.2"              # 通常回答
+
 SEARCH_MODEL = "gpt-5-search-api"    # 検索前提モデル（存在しない環境では gpt-4o-search-preview にフォールバック）
 
 # ===== Google CSE（任意） =====
@@ -154,6 +156,12 @@ def request_openai_vision_latest(
             "英字として読み取れる文字だけ教えてください。"
             "回答は必ず「文字列: <なんと書いてあるか>」の形式で。"
         )
+    # API 仕様: text は str 必須。リスト等が来たら文字列に丸める。
+    if not isinstance(prompt_text, str):
+        if isinstance(prompt_text, (list, tuple)):
+            prompt_text = " ".join(str(x) for x in prompt_text)
+        else:
+            prompt_text = str(prompt_text)
 
     def encode_image_to_base64(path: str) -> str:
         with open(path, "rb") as f:
@@ -171,7 +179,10 @@ def request_openai_vision_latest(
                 "role": "user",
                 "content": [
                     {"type": "input_text", "text": prompt_text},
-                    {"type": "input_image", "image_url": f"data:image/jpeg;base64,{base64_data}"},
+                    {
+                        "type": "input_image",
+                        "image_url": f"data:image/jpeg;base64,{base64_data}",
+                    },
                 ],
             }
         ],
@@ -181,25 +192,29 @@ def request_openai_vision_latest(
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {_OPENAI_API_KEY}",
+        "OpenAI-Beta": "responses=v1",
     }
 
     try:
         import requests
         resp = requests.post("https://api.openai.com/v1/responses", headers=headers, json=payload, timeout=90)
+        print("status:", resp.status_code)
+        print("body  :", resp.text)
         resp.raise_for_status()
         data = resp.json()
-        text_out = ""
-        for item in (data.get("output") or []):
-            if item.get("type") == "message" and item.get("role") == "assistant":
+        text_out = (data.get("output_text") or "").strip()
+        if not text_out:
+            for item in (data.get("output") or []):
                 for c in (item.get("content") or []):
-                    if c.get("type") in ("output_text", "text") and "text" in c:
+                    if c.get("type") in ("output_text", "text") and c.get("text"):
                         text_out += c["text"]
-        text_out = (text_out or "").strip()
+            text_out = (text_out or "").strip()
         if text_out.startswith("文字列:"):
             text_out = text_out[len("文字列:"):].strip()
         return text_out or "（空の応答でした）"
-    except Exception:
-        return "生成AIによる回答生成に失敗しました。(CAPTCHA)"
+    except Exception as e:
+        print(str(e))
+        return f"生成AIによる回答生成に失敗しました。詳細: {e}"
 
 
 # =========================================================
