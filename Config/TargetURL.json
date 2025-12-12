@@ -1,5 +1,19 @@
 {
-  "Lockbit5.0": {
+  "RustyLocker": {
+    "urlList": [
+      "http://rustydl5ak6p6ajqnja6qzkxvp5huhe4olpdsq5oy75ea4o34aalpkqd.onion"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment": "2025/12/9追加。"
+  },
+ "CRY0": {
+    "urlList": [
+      "http://cryoblogedawivdcknyd4jsjxkrx3xrqqltxla6wwjjnzm3f3jaxjzqd.onion"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment": "2025/12/9追加。"
+  },
+ "Lockbit5.0": {
     "urlList": [
       "http://lockbitapt67g6rwzjbcxnww5efpg4qok6vpfeth7wx3okj52ks4wtad.onion"
     ],

@@ -627,6 +627,9 @@ def clearCaptha(groupName, driver, soup, url):
             ret = _solve_threeam_captcha(groupName, driver, soup, saveCAPTCHAImage)
         elif uf.strstr(groupName, 'Kyber'):
             ret = _solve_kyber_captcha(groupName, driver, soup, saveCAPTCHAImage)
+        elif uf.strstr(groupName, 'RustyLocker'):
+            ret = _solve_RustyLocker_captcha(groupName, driver, soup, saveCAPTCHAImage)
+
     except Exception as e:
         Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
 
@@ -1313,6 +1316,53 @@ def _solve_kyber_captcha(groupName, driver, soup, saveCAPTCHAImage):
                             break
                     
                     driver.refresh()
+    return ret
+
+
+def _solve_RustyLocker_captcha(groupName, driver, soup, saveCAPTCHAImage):
+    ret = None
+    for i in range(3):
+        time.sleep(10)
+        pngData = Func_FindElementByClassName(driver, 'captcha-image').screenshot_as_png
+
+        if pngData:
+            filePath = saveCAPTCHAImage(groupName, pngData)
+
+            promptText = (
+                'この画像には英数字が5文字書いてあります。'
+                '英数字として読み取れる文字だけ教えてください。'
+                '回答は必ず「文字列:なんと書いてあるか」のように回答してください。これ以外の回答は不要です。'
+            )
+            captchaTxt = ga.request_openai_vision_latest(prompt_text = promptText, image_path = filePath)
+
+            if len(captchaTxt) > 5:
+                continue
+            captcha_input = driver.find_element(By.NAME, 'captcha_input')
+            if captcha_input:
+                captcha_input.send_keys(captchaTxt)
+
+                # verifyBtn = driver.find_element(By.CLASS_NAME, 'btn btn-soft-primary')
+                verifyBtn = driver.find_element(By.TAG_NAME, 'button')
+                # verifyBtn = Func_FindElementByClassName(driver, 'btn btn-soft-primary')
+                if verifyBtn:
+                    verifyBtn.click()
+
+                    time.sleep(5)
+
+                    html = driver.page_source.encode('utf-8')
+                    newSoup = BeautifulSoup(html, 'html.parser')
+
+                    title = newSoup.title.string
+                    if title:
+                        if not uf.strstr('Security Verification', title):
+                            ret = newSoup
+                            fo.Func_DeleteFile(filePath)
+                            break
+                        # errorText = 'The entered code does not match the image!'
+                        # else:
+                        #     refreshButton = Func_FindElementByClassName(driver, 'captcha__refresh')
+                        #     if refreshButton:
+                        #         refreshButton.click()
     return ret
 
 #   戻り値：取得したテキストを返す → 戻りとしては使わない。成否判定くらい

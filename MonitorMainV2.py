@@ -590,7 +590,8 @@ def main_threadVer():
             # targetGroupDic_Active.update(targetGroupDic_UseSeleniumBase)
 
             cf.headless_options = 2
-            groupNameList = ['Lockbit5.0']
+            groupNameList = ['RustyLocker']
+            # groupNameList = ['Lockbit5.0']
 
         # 同時に実行するスレッド数の上限
         MAX_THREADS = 5

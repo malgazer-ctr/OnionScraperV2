@@ -1301,7 +1301,7 @@ def getHTMLDiffandNotification(url, groupName, targetGroupDic, portForGroup):
                     Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'{str(e.args)}')
                     body = '【Location】:{}<br>【Exception】:{}'.format(Log.Trace.execution_location(), str(e))
                     Notification.sendMail_Nofication(f'スクレイピング対象：【{groupName}】<br>{body}', '【重要】システムエラー', cf.SENDTO_REPORT_YUICHI)
-                
+
             if IsNeedToNotification == True:
                 Log.LoggingWithFormat(groupName, logCategory = 'I', logtext = f'差分検知処理開始 diffDataあり')
 
