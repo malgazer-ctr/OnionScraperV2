@@ -55,6 +55,9 @@ TARGET_GROUPLIST_JSON = [
     #     "groupName":"BLACKSHRANTAC"
     # },
     {
+        "groupName":"Dark Shinigamis"
+    },  
+    {
         "groupName":"CRY0"
     },    
     {

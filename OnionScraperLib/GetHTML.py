@@ -2879,7 +2879,9 @@ def wrap_Func_scraping(driver, soup, groupName, url, forDetail = False, value=No
         ret = Func_scraping_Benzona(driver, soup, groupName, url, forDetail, value)  
     elif uf.strstr('TridentLocker', groupName):
         ret = Func_scraping_TridentLocker(driver, soup, groupName, url, forDetail, value)  
-
+    elif uf.strstr('Minteye', groupName):
+        ret = Func_scraping_Minteye(driver, soup, groupName, url, forDetail, value) 
+        
     # 超絶あほくさいけどsummaryのスペルミスでsummaryになっているが、
     # 今更戻せないのでつじつま合わせ用に新規取得したやつはここでsummaryを作成する。
     # 今スペル修正すると影響範囲デカすぎるのでそれはいつかやる
@@ -12271,11 +12273,11 @@ def Func_scraping_TridentLocker(driver, soup, groupName, url, forDetail, value):
 
             if soup != None:
                 # 被害組織説明取得
-                elem = soup.find(class_ = 'blog-article')
-                if elem != None:
-                    summary = getTextAll(groupName, elem)
-                    if len(summary):
-                        value['summary'] = summary
+                    elem = soup.find(class_ = 'blog-article')
+                    if elem != None:
+                        summary = getTextAll(groupName, elem)
+                        if len(summary):
+                            value['summary'] = summary
         else:
             if soup is not None:
                 cards = soup.find_all(class_='article')
@@ -12299,6 +12301,60 @@ def Func_scraping_TridentLocker(driver, soup, groupName, url, forDetail, value):
                             if elem:
                                 detailUrl = urllib.parse.urljoin(url, elem.get('href'))
                             
+                            # 被害組織名,掲載時刻、更新時刻取得,被害組織説明,被害組織URL,
+                            # その他情報(被害組織概要),詳細ページURL
+                            retDict[victimName] = {
+                                'updateDate': updateDate,
+                                'url': urlStr,
+                                'summary': summary,
+                                'detectedDate': uf.getDateTime('%Y/%m/%d %H:%M'),
+                                'detailUrl': detailUrl
+                            }
+    except Exception as e:
+        Log.LoggingWithFormat(
+            groupName,
+            logCategory='E',
+            logtext=f'args:{str(e.args)},msg:{str(e.msg)}'
+        )
+
+    return retDict
+
+
+def Func_scraping_Minteye(driver, soup, groupName, url, forDetail, value):
+    retDict = {}
+    try:
+        if forDetail:
+            pass
+        else:
+            if soup is not None:
+                cards = soup.find_all('article')
+                if len(cards) > 0:
+                    for i in cards:
+                        victimName = ''
+                        summary = ''
+                        urlStr = ''
+                        updateDate = ''
+                        detailUrl = ''
+
+                        elem = i.find('h2')
+                        if elem:
+                            victimName = elem.get_text(strip=True)
+
+                        if victimName:
+                            p_children = i.find_all('p', recursive=False)
+                            summary_candidates = [p.get_text(" ", strip=True) for p in p_children if p.get_text(strip=True)]
+                            if summary_candidates:
+                                summary = max(summary_candidates, key=len)
+
+                            link_img = i.find('img', src=re.compile(r'link', re.IGNORECASE))
+                            if link_img is not None:
+                                link_p = link_img.find_parent('p')
+                                if link_p is not None:
+                                    link_text = link_p.get_text(" ", strip=True)
+                                    m = re.search(r'(https?://[^\s]+|(?:www\.)?[A-Za-z0-9.-]+\.[A-Za-z]{2,})', link_text)
+                                    if m:
+                                        urlStr = m.group(0)
+
                             # 被害組織名,掲載時刻、更新時刻取得,被害組織説明,被害組織URL,
                             # その他情報(被害組織概要),詳細ページURL
                             retDict[victimName] = {
