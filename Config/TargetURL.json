@@ -1,4 +1,19 @@
 {
+   "Obscura 2.0": {
+    "urlList": [
+      "http://obscurad3aphckihv7wptdxvdnl5emma6t3vikcf3c5oiiqndq6y6xad.onion"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment0": "Obscura:2025/9/4追加。",
+    "comment": "Obscura 2.0:2025/12/14追加。URL変更なし"
+  },
+   "root": {
+    "urlList": [
+      "http://rybwfxzt2oehmnogxoqs7rhcsuq23akj2scz6j7wcneiakj4g7a6daad.onion"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment": "2025/12/14追加。"
+  },
    "Dark Shinigamis": {
     "urlList": [
       "http://darkshiz4d5ayumjvgbdhchwc7oeuc5jgbqkkgr2jj3ga5nvpjsswdad.onion"
@@ -187,13 +202,6 @@
     "SiteCategory": "RansowareLeakSite",
     "comment": "2025/9/6追加。"
   },
-  "Obscura": {
-    "urlList": [
-      "http://obscurad3aphckihv7wptdxvdnl5emma6t3vikcf3c5oiiqndq6y6xad.onion"
-    ],
-    "SiteCategory": "RansowareLeakSite",
-    "comment": "2025/9/4追加。"
-  }, 
   "LunaLock": {
     "urlList": [
       "http://lunalockcccxzkpfovwzifwxcytqkiuak6wzybnniqwxcmpsetpbetid.onion/victim/"

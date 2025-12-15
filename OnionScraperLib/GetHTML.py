@@ -2881,7 +2881,9 @@ def wrap_Func_scraping(driver, soup, groupName, url, forDetail = False, value=No
         ret = Func_scraping_TridentLocker(driver, soup, groupName, url, forDetail, value)  
     elif uf.strstr('Minteye', groupName):
         ret = Func_scraping_Minteye(driver, soup, groupName, url, forDetail, value) 
-        
+    elif uf.strstr('root', groupName):
+        ret = Func_scraping_root(driver, soup, groupName, url, forDetail, value) 
+     
     # 超絶あほくさいけどsummaryのスペルミスでsummaryになっているが、
     # 今更戻せないのでつじつま合わせ用に新規取得したやつはここでsummaryを作成する。
     # 今スペル修正すると影響範囲デカすぎるのでそれはいつかやる
@@ -11456,20 +11458,10 @@ def Func_scraping_Obscura(driver, soup, groupName, url, forDetail, value):
     retDict = {}
     try:
         if forDetail:
-            html = driver.page_source.encode('utf-8')
-            soup = BeautifulSoup(html, 'html.parser')
-
-            if soup != None:
-                # 被害組織説明取得
-                elem = soup.find(class_ = "ql-editor")
-                if elem != None:
-                    summary = getTextAll(groupName, elem)
-                    if len(summary):
-                        
-                        value['summary'] = value['country'] + '\n\n' + summary
+            pass
         else:
             if soup != None:
-                cards = soup.find_all('a', class_='company')
+                cards = soup.find_all(class_='card')
                 if len(cards) > 0:
                     for i in cards:
                         victimName = ''
@@ -11480,20 +11472,26 @@ def Func_scraping_Obscura(driver, soup, groupName, url, forDetail, value):
                         country = ''
 
                         # 組織名称（タイトル） - h2タグから取得
-                        elem = i.find('h2')
+                        elem = i.find(class_ = 'title')
                         if elem:
                             victimName = elem.get_text(strip=True)
                         
                         if victimName:
-                            # 説明文 - p タグから取得（status-lineとcountdownクラス以外）
-                            elems = i.find_all('p')
-                            description = None
-                            for p in elems:
-                                # statusやcountdownではない p タグを探す
-                                if not p.get('class') or ('status-line' not in p.get('class') and 'countdown' not in p.get('class')):
-                                    description = p.get_text(strip=True)
-                                    break
-                            summary = description
+                            elem = i.find(class_ = 'domain')
+                            if elem:
+                                urlStr = elem.get_text(strip=True)
+
+                            elem = i.find(class_ = 'created')
+                            if elem:
+                                updateDate = elem.get_text(strip=True)
+
+                            elem = i.find(class_ = 'industry')
+                            if elem:
+                                summary = elem.get_text(strip=True)
+
+                            elem = i.find(class_ = 'card-desc')
+                            if elem:
+                                summary = summary + '\n\n' + elem.get_text(strip=True)
 
                             # 被害組織名,掲載時刻、更新時刻取得,被害組織説明,被害組織URL,その他情報(被害組織概要),詳細ページURL
                             retDict[victimName] = {'country':country, 'updateDate':updateDate, 'url': urlStr, 'summary':summary, 'detectedDate':uf.getDateTime('%Y/%m/%d %H:%M'), 'detailUrl':detailUrl}
@@ -12354,6 +12352,43 @@ def Func_scraping_Minteye(driver, soup, groupName, url, forDetail, value):
                                     m = re.search(r'(https?://[^\s]+|(?:www\.)?[A-Za-z0-9.-]+\.[A-Za-z]{2,})', link_text)
                                     if m:
                                         urlStr = m.group(0)
+
+                            # 被害組織名,掲載時刻、更新時刻取得,被害組織説明,被害組織URL,
+                            # その他情報(被害組織概要),詳細ページURL
+                            retDict[victimName] = {
+                                'updateDate': updateDate,
+                                'url': urlStr,
+                                'summary': summary,
+                                'detectedDate': uf.getDateTime('%Y/%m/%d %H:%M'),
+                                'detailUrl': detailUrl
+                            }
+    except Exception as e:
+        Log.LoggingWithFormat(
+            groupName,
+            logCategory='E',
+            logtext=f'args:{str(e.args)},msg:{str(e.msg)}'
+        )
+
+    return retDict
+
+def Func_scraping_root(driver, soup, groupName, url, forDetail, value):
+    retDict = {}
+    try:
+        if forDetail:
+            pass
+        else:
+            if soup is not None:
+                cards = soup.find_all('a')
+                if len(cards) > 0:
+                    for i in cards:
+                        victimName = ''
+                        summary = ''
+                        urlStr = ''
+                        updateDate = ''
+                        detailUrl = ''
+
+                        victimName = i.get_text(strip=True)
+                        if victimName:
 
                             # 被害組織名,掲載時刻、更新時刻取得,被害組織説明,被害組織URL,
                             # その他情報(被害組織概要),詳細ページURL
