@@ -45,6 +45,10 @@ def request_ChatGPT_latest(promptText: str, isAnnouceJudge: bool = False) -> Tup
 
     try:
         # Responses API を試す（新形式の text.format を使用）
+        # reasoning.effortについて
+        # effort = none なら、reasoning パラメータは「設定しない（省略する）」扱いにするのが安全です。low/medium/high 以外（例: "none"）を送ると
+        # API 側で弾かれる可能性があるため、現状の request_ChatGPT_latest() はそのままでOKです。
+        # 将来有効化したくなったら、client.responses.create(...) にだけ reasoning={"effort":"low"} のように追加し（フォールバックの chat.completions 側には付けない）運用してください。
         try:
             resp = client.responses.create(
                 model=DEFAULT_MODEL,
