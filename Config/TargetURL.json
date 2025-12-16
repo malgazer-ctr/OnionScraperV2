@@ -1,4 +1,11 @@
 {
+   "MS13-089": {
+    "urlList": [
+      "http://msleakjir7pxbe6onlqe5uwgvdmy6nq4mnwfy7ojswbhnleenm77vgad.onion"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment": "2025/12/16追加。"
+  },
    "Obscura 2.0": {
     "urlList": [
       "http://obscurad3aphckihv7wptdxvdnl5emma6t3vikcf3c5oiiqndq6y6xad.onion"

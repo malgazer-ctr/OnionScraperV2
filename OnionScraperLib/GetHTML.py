@@ -2882,7 +2882,9 @@ def wrap_Func_scraping(driver, soup, groupName, url, forDetail = False, value=No
     elif uf.strstr('Minteye', groupName):
         ret = Func_scraping_Minteye(driver, soup, groupName, url, forDetail, value) 
     elif uf.strstr('root', groupName):
-        ret = Func_scraping_root(driver, soup, groupName, url, forDetail, value) 
+        ret = Func_scraping_root(driver, soup, groupName, url, forDetail, value)
+    elif uf.strstr('MS13-089', groupName):
+        ret = Func_scraping_MS13_089(driver, soup, groupName, url, forDetail, value)  
      
     # 超絶あほくさいけどsummaryのスペルミスでsummaryになっているが、
     # 今更戻せないのでつじつま合わせ用に新規取得したやつはここでsummaryを作成する。
@@ -12405,5 +12407,56 @@ def Func_scraping_root(driver, soup, groupName, url, forDetail, value):
             logCategory='E',
             logtext=f'args:{str(e.args)},msg:{str(e.msg)}'
         )
+
+    return retDict
+
+def Func_scraping_MS13_089(driver, soup, groupName, url, forDetail, value):
+    retDict = {}
+    try:
+        if forDetail:
+            html = driver.page_source.encode('utf-8')
+            soup = BeautifulSoup(html, 'html.parser')
+
+            if soup != None:
+                # 被害組織説明取得
+                elem = soup.find(class_ = 'full-bord')
+                if elem != None:
+                    summary = getTextAll(groupName, elem)
+                    if len(summary):
+                        value['summary'] = summary
+        else:
+            if soup != None:
+                cards = soup.find_all(class_ = 'post bad')
+                if len(cards) > 0:
+                    for i in cards:
+                        victimName = ''
+                        summary = ''
+                        urlStr = ''
+                        updateDate = ''
+                        detailUrl = ''
+
+                        elem = i.find(class_ = 'post-title-block')
+                        if elem != None:
+                            victimName = elem.get_text(strip=True)
+
+                        if victimName:
+                            elem = i.find(class_ = 'post-text')
+                            if elem != None:
+                                summary = elem.get_text(strip=True)
+
+                            elem = i.find(class_ = 'post-more-link f_left')
+                            if elem != None:
+                                onclick_value = elem.get('onclick')
+                                if onclick_value:
+                                    match = re.search(r"location\.href\s*=\s*['\"]([^'\"]+)['\"]", onclick_value)
+                                    if match:
+                                        locationUrl = match.group(1)
+                                        detailUrl = urllib.parse.urljoin(url, locationUrl)
+
+
+                            # 被害組織名,掲載時刻、更新時刻取得,被害組織説明,被害組織URL,その他情報(被害組織概要),詳細ページURL
+                            retDict[victimName] = {'updateDate':updateDate, 'url': urlStr, 'summary':summary, 'detectedDate':uf.getDateTime('%Y/%m/%d %H:%M'), 'detailUrl':detailUrl}
+    except Exception as e:
+        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
 
     return retDict

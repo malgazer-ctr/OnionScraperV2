@@ -32,6 +32,7 @@ import urllib.parse
 from Config import Config as cf
 from OnionScraperLib import FileOperate as fo
 from OnionScraperLib import SetupBrowser as sb
+from OnionScraperLib import GetHTML as gh
 
 # -----------------------------------------------------------------------------------------
 # -----------------------------------------------------------------------------------------
@@ -445,8 +446,10 @@ def saveResultScreenShot(groupName, accessTimeStr, driver):
         retDstFilePath = os.path.join(dstDirPath, f'{groupName}_BodyScreenShot_{accessTimeStr}.png')
     
         # <body> 要素を取得
-        body = driver.find_element(By.TAG_NAME, 'body')
-        body.screenshot(retDstFilePath)
+        # body = driver.find_element(By.TAG_NAME, 'body')
+        # body.screenshot(retDstFilePath)
+
+        retDstFilePath = gh.getScreenShot(groupName, driver, dstDirPath)
 
         cleanup_local_backups(groupName, dstDirPath)
 
@@ -905,6 +908,7 @@ def scrape_urls(url_list):
                     text = ''
                     forceNotification = False
                     if len(accessResultTmp) == 1:
+                        forceNotification = True
                         subject = '特定監視サイトの変更検知 (監視開始)'
                     else:
                         latest = accessResultTmp[0]
