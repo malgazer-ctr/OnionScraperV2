@@ -2884,7 +2884,9 @@ def wrap_Func_scraping(driver, soup, groupName, url, forDetail = False, value=No
     elif uf.strstr('root', groupName):
         ret = Func_scraping_root(driver, soup, groupName, url, forDetail, value)
     elif uf.strstr('MS13-089', groupName):
-        ret = Func_scraping_MS13_089(driver, soup, groupName, url, forDetail, value)  
+        ret = Func_scraping_MS13_089(driver, soup, groupName, url, forDetail, value)
+    elif uf.strstr('OSIRIS PROJECT', groupName):
+        ret = Func_scraping_OSIRIS_PROJECT(driver, soup, groupName, url, forDetail, value)  
      
     # 超絶あほくさいけどsummaryのスペルミスでsummaryになっているが、
     # 今更戻せないのでつじつま合わせ用に新規取得したやつはここでsummaryを作成する。
@@ -12456,6 +12458,45 @@ def Func_scraping_MS13_089(driver, soup, groupName, url, forDetail, value):
 
                             # 被害組織名,掲載時刻、更新時刻取得,被害組織説明,被害組織URL,その他情報(被害組織概要),詳細ページURL
                             retDict[victimName] = {'updateDate':updateDate, 'url': urlStr, 'summary':summary, 'detectedDate':uf.getDateTime('%Y/%m/%d %H:%M'), 'detailUrl':detailUrl}
+    except Exception as e:
+        Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
+
+    return retDict
+
+def Func_scraping_OSIRIS_PROJECT(driver, soup, groupName, url, forDetail, value):
+    retDict = {}
+
+    try:
+        if forDetail:
+            pass
+        else:
+            databaseUrl = urllib.parse.urljoin(url, '/rest/blog/posts?offset=0&limit=10&search=')
+            response = sb.getHtmlResponseByRequest(databaseUrl)
+            if len(response.content) > 0:
+                text = response.content.decode("utf-8")
+                dataArray = json.loads(text) 
+
+            content = dataArray.get('content', {})
+            if content:
+                payload = content.get('payload', [])
+                if payload:
+                    dataArray = payload
+
+            for i in dataArray:
+                targetKey = i.get('target', {})
+
+                victimName = targetKey.get('name','')
+                summary = i.get('description','')
+                summryTemp1 = targetKey.get('country','')
+                summryTemp2 = targetKey.get('b2b','')
+                summary = '\n'.join(filter(None, [summary, summryTemp1, summryTemp2]))
+                updateDate = targetKey.get('created_at','')
+                urlStr = ''
+                detailUrl = ''
+                	
+                if victimName:
+                    retDict[victimName] = {'updateDate':updateDate, 'url': urlStr, 'summary':summary, 'detectedDate':uf.getDateTime('%Y/%m/%d %H:%M'), 'detailUrl':detailUrl}
+            
     except Exception as e:
         Log.LoggingWithFormat(groupName, logCategory = 'E', logtext = f'args:{str(e.args)},msg:{str(e.msg)}')
 

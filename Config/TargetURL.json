@@ -1,4 +1,12 @@
 {
+  "OSIRIS PROJECT": {
+    "urlList": [
+      "https://osirisbm3357xrccnid23nlyuqwzbgqheaei6dxvyi34tbkqr3bmvfid.onion/app/publications",
+      "https://ausare.onineton/app/publications"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment": "2025/12/18追加。"
+  },
    "MS13-089": {
     "urlList": [
       "http://msleakjir7pxbe6onlqe5uwgvdmy6nq4mnwfy7ojswbhnleenm77vgad.onion"
