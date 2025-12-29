@@ -23,6 +23,7 @@ from multiprocessing import Lock
 import socket
 import tempfile
 import psutil
+import shutil
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 from selenium.webdriver.common.by import By
@@ -49,12 +50,9 @@ from OnionScraperLib import GetHTML as gh
 # ]
 
 TARGET_GROUPLIST_JSON = [
-    # {
-    #     "groupName":"LunaLock"
-    # },
-    # {
-    #     "groupName":"BLACKSHRANTAC"
-    # },
+    {
+        "groupName":"Sicarii"
+    },  
     {
         "groupName":"Dark Shinigamis"
     },  
@@ -64,9 +62,6 @@ TARGET_GROUPLIST_JSON = [
     {
         "groupName":"FulcrumSec"
     },
-    # {
-    #     "groupName":"TENGU"
-    # },
     {
         "groupName":"AKIRA",
         "useRequestMethod":True,
@@ -141,36 +136,64 @@ def log_exception(e):
 # TORの起動とブラウザのセットアップ、クリア処理関数
 # -------------------------------------------------------------------------------------------------
 # 一時的なtorrcファイルを作成
-def create_torrc(socks_port):
+def create_torrc(socks_port, control_port, data_dir):
     torConfFile = ''
     try:
+        os.makedirs(data_dir, exist_ok=True)
         temp_dir = tempfile.mkdtemp()
-        torConfFile = os.path.join(temp_dir, f'torrc_{socks_port}')
+        torConfFile = os.path.join(temp_dir, f'torrc_{socks_port}_{control_port}')
         with open(torConfFile, 'w') as torrc_file:
-            torrc_file.write(f"ControlPort {TOR_CONTROL_PORT}\n")
+            torrc_file.write(f"ControlPort {control_port}\n")
             torrc_file.write("CookieAuthentication 1\n")
             torrc_file.write(f"SOCKSPort {socks_port}\n")
+            safe_data_dir = data_dir.replace("\\", "/")
+            torrc_file.write(f'DataDirectory "{safe_data_dir}"\n')
     except Exception as e:
         log_exception(e)
 
     return torConfFile
 
+def is_port_listening(host, port, timeout_sec=1.0):
+    try:
+        with socket.create_connection((host, int(port)), timeout=timeout_sec):
+            return True
+    except OSError:
+        return False
+
+def is_tor_process_alive(torProc):
+    try:
+        if not torProc:
+            return False
+        if torProc.poll() is not None:
+            out, err = torProc.communicate(timeout=5)
+            print("tor stdout:", out)
+            print("tor stderr:", err)
+            return False
+        return psutil.pid_exists(torProc.pid)
+    except Exception as e:
+        log_exception(e)
+        return False
+
 # Torをバックグラウンドで起動する
-def start_tor(socks_port):
+def start_tor(socks_port, control_port, data_dir):
     try:
         torProc = None
         if not os.path.exists(TOR_PATH):
             raise FileNotFoundError(f"Tor executable not found at {TOR_PATH}. Please install Tor or provide the correct path.")
-        torConfFile = create_torrc(socks_port)
-        torProc = subprocess.Popen([TOR_PATH, '-f', torConfFile])
-        wait_for_tor_startup()
+        torConfFile = create_torrc(socks_port, control_port, data_dir)
+        torProc = subprocess.Popen([TOR_PATH, '-f', torConfFile],
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    text=True
+                                   )
+        wait_for_tor_startup(torProc, socks_port, control_port)
     except Exception as e:
         log_exception(e)
 
     return torProc, torConfFile
 
 # Torが完全に起動したか確認する
-def wait_for_tor_startup():
+def wait_for_tor_startup(torProc, socks_port, control_port):
     try:
         start_time = time.time()
         timeout = 60  # 最大待機時間 60秒
@@ -178,8 +201,8 @@ def wait_for_tor_startup():
             if time.time() - start_time > timeout:
                 ctypes.windll.user32.MessageBoxW(0, "Tor did not start within the expected time frame.", "Error", 1)
                 raise TimeoutError("Tor did not start within the expected time frame.")
-            if is_tor_running():
-                print("Tor is fully started.")
+            if is_tor_process_alive(torProc) and is_port_listening("127.0.0.1", socks_port) and is_port_listening("127.0.0.1", control_port):
+                print("Tor is fully started (ports are listening).")
                 break
             time.sleep(5)  # 5秒待機して再確認
     except Exception as e:
@@ -203,6 +226,17 @@ def reset_tor_port():
             controller.authenticate()
             controller.signal(Signal.NEWNYM)
             time.sleep(10)  # 新しいIPが有効になるまで少し待機
+    except SocketError as e:
+        log_exception(f"Socket error: {e}. Make sure Tor is running and the control port is accessible.")
+    except Exception as e:
+        log_exception(e)
+
+def reset_tor_port_by_control_port(control_port):
+    try:
+        with Controller.from_port(port=int(control_port)) as controller:
+            controller.authenticate()
+            controller.signal(Signal.NEWNYM)
+            time.sleep(10)
     except SocketError as e:
         log_exception(f"Socket error: {e}. Make sure Tor is running and the control port is accessible.")
     except Exception as e:
@@ -274,36 +308,70 @@ def find_unused_port(start_port=9500, end_port=9900):
 
 # ブラウザドライバをセットアップする
 def setup_driver():
-    try:
-        # socks_port = get_random_socks_port()
-        socks_port = find_unused_port()
-        reset_tor_port()
+    torProc = None
+    driver = None
+    service = None
+    temp_dir = None
+    torConfFile = None
+    torDataDir = None
+    torControlPort = None
 
-        torProc, torConfFile = start_tor(socks_port)  # Torを起動
+    for attempt in range(1, 4):
+        try:
+            socks_port = find_unused_port()
+            torControlPort = find_unused_port()
+            torDataDir = tempfile.mkdtemp(prefix=f"tor_data_{socks_port}_{torControlPort}_")
 
-        driver, service, temp_dir = sb.Func_SettingDriver_Chrome(socks_port,
-                                                                 'SingleSiteWatcher',
-                                                                 execute_driver = True,
-                                                                 TorEnable = True,
-                                                                 headless_options = False)
+            torProc, torConfFile = start_tor(socks_port, torControlPort, torDataDir)
+            reset_tor_port_by_control_port(torControlPort)
 
-        return torProc, driver, service, temp_dir, torConfFile
-    except Exception as e:
-        log_exception(e)
-        return None
+            driver, service, temp_dir = sb.Func_SettingDriver_Chrome(
+                socks_port,
+                'SingleSiteWatcher',
+                execute_driver=True,
+                TorEnable=True,
+                headless_options=False,
+            )
+
+            if not is_tor_process_alive(torProc):
+                raise RuntimeError("Tor process is not alive after setup_driver()")
+
+            return torProc, driver, service, temp_dir, torConfFile, torDataDir, torControlPort
+        except Exception as e:
+            log_exception(e)
+            try:
+                clear_driver(torProc, driver, service, temp_dir, torConfFile, torDataDir)
+            except Exception as cleanup_e:
+                log_exception(cleanup_e)
+            torProc = driver = service = temp_dir = torConfFile = torDataDir = None
+            time.sleep(3 * attempt)
+
+    return None
     
-def clear_driver(torProc, driver, service, temp_dir, torConfFile):
+def clear_driver(torProc, driver, service, temp_dir, torConfFile, torDataDir=None):
     # temp_dirはE:\MonitorSystem\Source\OnionScraperV2\MonitorMainV2_Watcher.pyがわで削除してくれるから頼る
 
     if driver:
-        driver.quit()
+        try:
+            driver.quit()
+        except Exception:
+            pass
     if torProc:
-        torProc.terminate()
-        torProc.wait()  # プロセスが終了するのを待つ
+        try:
+            if is_tor_process_alive(torProc):
+                torProc.terminate()
+                torProc.wait(timeout=10)  # プロセスが終了するのを待つ
+        except Exception:
+            pass
     if service:
         killService(service)
 
     cleanup_torrc(torConfFile)
+    if torDataDir:
+        try:
+            shutil.rmtree(torDataDir, ignore_errors=True)
+        except Exception:
+            pass
 
 # 一時的なtorrcファイルを削除
 def cleanup_torrc(torConfFile):
@@ -770,6 +838,12 @@ def scrape_urls(url_list):
                 retTextData = ''
                 resultScreenShotPath = ''
                 driver = None
+                torProc = None
+                service = None
+                temp_dir = None
+                torConfFile = None
+                torDataDir = None
+                torControlPort = None
                 
                 accessResult = {
                     'url':url,
@@ -789,12 +863,16 @@ def scrape_urls(url_list):
 
                 # seleniumを使用する場合はDriverの取得は一回だけ
                 if not useRequestMethod:
-                    torProc, driver, service, temp_dir, torConfFile = setup_driver()
+                    setup_ret = setup_driver()
+                    if not setup_ret:
+                        raise Exception("Driver setup failed")
+                    torProc, driver, service, temp_dir, torConfFile, torDataDir, torControlPort = setup_ret
                     if not driver:
                         raise Exception("Driver setup failed")
                 
                 try:
                     retries = 0
+                    driver_restarts = 0
                     while retries < MAX_RETRIES:
                         try:
                             access_start = time.time()
@@ -814,6 +892,16 @@ def scrape_urls(url_list):
                                     retries += 1
                                     continue
                             else:
+                                if not is_tor_process_alive(torProc):
+                                    if driver_restarts >= 3:
+                                        raise Exception("Tor process died and max restart attempts exceeded")
+                                    clear_driver(torProc, driver, service, temp_dir, torConfFile, torDataDir)
+                                    setup_ret = setup_driver()
+                                    if not setup_ret:
+                                        raise Exception("Driver re-setup failed after Tor process died")
+                                    torProc, driver, service, temp_dir, torConfFile, torDataDir, torControlPort = setup_ret
+                                    driver_restarts += 1
+
                                 driver.set_page_load_timeout(600)  # タイムアウト時間を設定
                                 driver.get(url)
                                 html = driver.page_source.encode('utf-8')
@@ -866,6 +954,13 @@ def scrape_urls(url_list):
                             should_continue, error_type = should_retry(error_message)
                             accessResult['status']['connectionStatus'] = 'error'
                             log_exception(e)
+                            if (not useRequestMethod) and ("ERR_PROXY_CONNECTION_FAILED" in error_message or "proxy" in error_message.lower()):
+                                if driver_restarts < 3:
+                                    clear_driver(torProc, driver, service, temp_dir, torConfFile, torDataDir)
+                                    setup_ret = setup_driver()
+                                    if setup_ret:
+                                        torProc, driver, service, temp_dir, torConfFile, torDataDir, torControlPort = setup_ret
+                                        driver_restarts += 1
                             if not should_continue:
                                 accessResult['status']['errorString'] =f"WebDriver error. Non-retryable error detected : {error_type}"
                                 break  # リトライ不要なエラーの場合はループを抜ける
@@ -894,7 +989,7 @@ def scrape_urls(url_list):
                         resultTextDataPath = saveResultTextData(groupName, forFileName_time, retTextData)
 
                     if driver:
-                        clear_driver(torProc, driver, service, temp_dir, torConfFile)
+                        clear_driver(torProc, driver, service, temp_dir, torConfFile, torDataDir)
 
                 ret = update_and_write_status(groupName, accessResult)
 

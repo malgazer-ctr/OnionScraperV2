@@ -1,4 +1,16 @@
 {
+  "Sicarii": {
+    "urlList": [
+      "http://sicari7zpu3mtxqggde7mu3ywppntdqg22arcukvlaihjbfcb2rnktid.onion/blog.php",
+      "http://sicarinb4ktqcdpubjifzw3vixvzgtwacjmc5ks56kev52gxitegigad.onion/blog.php",
+      "http://sicariktdbhjtrk6f2pwdh6wlequw7pcjva25skkzz4m3zz3opyox3qd.onion/blog.php",
+      "http://sicarilxx2br6esqnhad4w26bcgb5j2snbbnhyo4b6t7kby2oy4x3jad.onion/blog.php",
+      "http://sicariifoucvhyqg54smi3esg5sfcyw5z65t6yigqu4loyuoz62bb2id.onion/blog.php",
+      "http://sicari7m63wlggfxajiuonfsk72fgencne5ztzakyuhfxzq5rnbkjead.onion/blog.php"
+    ],
+    "SiteCategory": "RansowareLeakSite",
+    "comment": "2025/12/29追加。"
+  },
   "OSIRIS PROJECT": {
     "urlList": [
       "https://osirisbm3357xrccnid23nlyuqwzbgqheaei6dxvyi34tbkqr3bmvfid.onion/app/publications",
